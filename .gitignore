@@ -1,0 +1,29 @@
+# Credentials and local configuration
+.env
+.env.*
+env
+env.*
+!.env.example
+
+# Python artifacts and logs
+__pycache__/
+*.py[cod]
+*.log
+*.log.txt
+log.txt
+
+# Operational response/cache data
+json/content.json
+alertas_cache.json
+
+# Local Android/Gradle output
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
