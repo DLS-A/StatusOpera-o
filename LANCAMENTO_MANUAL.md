@@ -4,13 +4,13 @@ Este roteiro é para distribuir o app diretamente a um grupo interno, instalando
 
 ## Estado de prontidão
 
-O código local está na branch `main`, com os commits preparados e o commit inicial do GitHub já mesclado. O remoto `https://github.com/DLS-A/StatusOpera-o.git` recebeu somente o README; o código completo ainda aguarda o push. O Git local retornou HTTP 403 porque a conta autenticada não tem permissão de escrita. Ainda não há URL do Render nem client ID final do Supabase neste projeto. O APK existente é antigo e de debug.
+O código e a documentação já foram publicados em `https://github.com/DLS-A/StatusOpera-o`, branch `main`, pelo conector GitHub. O conteúdo da branch local foi sincronizado com essa árvore. O Git local retornou HTTP 403 porque a conta autenticada não tem permissão de escrita; essa conta precisará ser corrigida para enviar alterações futuras pelo terminal. Ainda não há URL do Render nem client ID final do Supabase neste projeto. O APK existente é antigo e de debug.
 
 **Portanto, o APK existente não está pronto para entrega aos usuários.** Não gere nem distribua um APK release até completar as etapas marcadas como bloqueadoras abaixo.
 
 ## Fase 1 — Desbloquear publicação do código
 
-1. Autentique o Git local com uma conta que tenha acesso de escrita ao repositório `DLS-A/StatusOpera-o`, ou solicite ao administrador do repositório a permissão necessária. O remoto já foi inicializado com o README e mesclado nesta branch local.
+1. Confirme no GitHub que `main` contém `render.yaml`, `backend/`, `android/` e os guias. O código inicial já foi publicado. Para enviar novas alterações pelo Git local, autentique uma conta com acesso de escrita ao repositório `DLS-A/StatusOpera-o`, ou solicite essa permissão ao administrador.
 2. Na raiz do projeto, confirme o destino e a branch:
 
    ```powershell
