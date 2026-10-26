@@ -19,7 +19,7 @@ Este documento registra o estado conhecido do projeto e o roteiro para publicar 
 - O repositório `DLS-A/StatusOpera-o`, branch `main`, já recebeu o código e a documentação pelo conector GitHub (commit `4f3de87`). A branch local buscou e mesclou esse commit; o conteúdo local e remoto está alinhado. O comando `git push` pelo Git local ainda retorna HTTP 403 para a conta autenticada. Configure uma conta com acesso de escrita antes de enviar commits locais futuros.
 - Não há confirmação de que o serviço Render foi criado ou implantado.
 - O OAuth Server Supabase, o client público e os usuários autorizados ainda precisam ser configurados.
-- O banco Supabase precisa receber as migrações do projeto.
+- As duas migrations do repositório já estão aplicadas no Supabase; as tabelas `operational.snapshot_runs` e `operational.records` existem com RLS habilitado. Ainda não há snapshots ou registros gravados.
 - Os segredos de produção, o client ID e a lista de e-mails autorizados precisam ser configurados nos ambientes corretos.
 - As propriedades locais de build Android ainda não contêm a URL real do backend nem o client ID final.
 - Falta testar o ciclo real completo: login, autorização, leitura GRM e persistência.
@@ -103,7 +103,7 @@ O backend grava cada consulta autenticada no schema privado `operational`. Sem a
 3. Abra e execute, nesta ordem, os arquivos:
    - `supabase/migrations/20261023162717_create_operational_history.sql`
    - `supabase/migrations/20261023162855_index_snapshot_record_references.sql`
-4. Confirme que existem `operational.snapshot_runs` e `operational.records`, que o índice `records_last_snapshot_id_idx` foi criado e que RLS está habilitado nas duas tabelas.
+4. As migrations `20261023162717_create_operational_history` e `20261023162855_index_snapshot_record_references` já foram aplicadas. Confirme que existem `operational.snapshot_runs` e `operational.records`, que o índice `records_last_snapshot_id_idx` foi criado e que RLS está habilitado nas duas tabelas. Se o projeto for restaurado/recriado, reaplique os arquivos na ordem indicada.
 5. Em **Project Settings → Database → Connect**, copie a URI de conexão Postgres apropriada para conexão externa. Substitua a senha localmente, se necessário, e confirme que o endereço usa SSL. Não compartilhe a URI com senha.
 
 As tabelas ficam num schema privado, sem acesso concedido aos papéis públicos `anon` e `authenticated`. O backend acessa o banco por conexão Postgres própria. Não exponha esse schema na Data API para resolver problemas de conexão.
@@ -238,7 +238,7 @@ O app atual faz polling e alertas locais enquanto está em primeiro plano. Alert
 ## 10. Checklist final
 
 - [ ] `main` publicado no GitHub com `render.yaml`, sem `.env`, logs, caches ou segredos.
-- [ ] Migrations executadas na ordem e tabelas privadas verificadas no Supabase.
+- [x] Migrations executadas na ordem e tabelas privadas verificadas no Supabase (26/10/2026; sem dados de snapshot ainda).
 - [ ] Blueprint importado; serviço Render criado e deploy concluído.
 - [ ] Variáveis GRM, Postgres, client ID e allowlist configuradas no Render.
 - [ ] OAuth Server ativo; URL/site/caminho e assinatura JWT assimétrica confirmados.
