@@ -29,7 +29,7 @@ O código e a documentação já foram publicados em `https://github.com/DLS-A/S
 
 ## Fase 2 — Preparar backend e banco
 
-1. No Supabase, execute em ordem as duas migrations em `supabase/migrations/` pelo SQL Editor. Confirme as tabelas `operational.snapshot_runs` e `operational.records` e RLS habilitado.
+1. As duas migrations em `supabase/migrations/` já foram aplicadas no Supabase. Confirme `operational.snapshot_runs`, `operational.records` e RLS habilitado antes do deploy; reaplique-as pelo SQL Editor somente se o banco for recriado/restaurado sem essas tabelas.
 2. No painel Supabase, habilite **Authentication → OAuth Server** e configure assinatura JWT assimétrica (`RS256` ou `ES256`).
 3. No Render, crie um Blueprint ligado ao repositório `DLS-A/StatusOpera-o`, branch `main`, usando `render.yaml`. Revise plano/preço antes de criar o serviço.
 4. No Render, preencha apenas no painel as variáveis `URL_API_GRM`, `TOKEN_API_APONTAMENTOS_GRM_PUSH` e `SUPABASE_DB_URL`. Nunca coloque esses segredos no GitHub ou no app.
@@ -104,7 +104,7 @@ O endpoint `/healthz` sozinho não valida login, API GRM nem banco.
 ## Checklist de liberação
 
 - [ ] Push da branch `main` concluído sem arquivos privados.
-- [ ] Migrations aplicadas e tabelas verificadas.
+- [x] Migrations aplicadas e tabelas verificadas no Supabase (26/10/2026).
 - [ ] Serviço HTTPS Render em produção e variáveis secretas configuradas.
 - [ ] OAuth Server, client público e allowlist Supabase configurados.
 - [ ] APK configurado com URL/issuer/client ID corretos.
