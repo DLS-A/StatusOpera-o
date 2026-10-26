@@ -16,7 +16,7 @@ Este documento registra o estado conhecido do projeto e o roteiro para publicar 
 
 ### Ainda não concluído (última conferência local)
 
-- O repositório local está na branch `main` e contém o código e a documentação em commits locais. O remoto `origin` aponta para `https://github.com/DLS-A/StatusOpera-o.git`. O Git local recebeu HTTP 403 na tentativa de push; o conector GitHub conseguiu inicializar o remoto apenas com o `README.md`. Esse commit remoto já foi buscado e mesclado localmente, então o próximo push é fast-forward assim que o Git local usar uma conta com permissão de escrita.
+- O repositório `DLS-A/StatusOpera-o`, branch `main`, já recebeu o código e a documentação pelo conector GitHub (commit `4f3de87`). A branch local buscou e mesclou esse commit; o conteúdo local e remoto está alinhado. O comando `git push` pelo Git local ainda retorna HTTP 403 para a conta autenticada. Configure uma conta com acesso de escrita antes de enviar commits locais futuros.
 - Não há confirmação de que o serviço Render foi criado ou implantado.
 - O OAuth Server Supabase, o client público e os usuários autorizados ainda precisam ser configurados.
 - O banco Supabase precisa receber as migrações do projeto.
