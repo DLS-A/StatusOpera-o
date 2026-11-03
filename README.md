@@ -4,6 +4,7 @@
 
 O estado, as pendências e o passo a passo detalhado de publicação do backend, configuração Supabase/OIDC, build e validação estão em [CONTINUIDADE_APP.md](CONTINUIDADE_APP.md).
 Para a distribuição interna manual do APK assinado, siga também [LANCAMENTO_MANUAL.md](LANCAMENTO_MANUAL.md).
+Para o fluxo de uso previsto e a lista do que falta para chegar ao app completo, consulte [TUTORIAL_FUNCIONAMENTO_APP.md](TUTORIAL_FUNCIONAMENTO_APP.md).
 
 O bot Python legado foi preservado. O app Android em `android/` consulta dados pelo servico autenticado em `backend/`. As credenciais da API GRM ficam no ambiente do servidor; o backend falha fechado se o provedor OIDC nao estiver configurado ou disponivel.
 
