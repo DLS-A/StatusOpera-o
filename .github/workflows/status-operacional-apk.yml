@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      SOURCE_URL: https://storage.googleapis.com/runable-templates/cli-uploads%2F6mxGjuIma2D7hI1HGIwXfbVq9iXocDlF%2Ftet8oZh5WfIhpLH1Tcoi2%2FStatus_Operacional_fontes_build_0.3.0-test.zip
-      SOURCE_SHA256: 5d0f1f2772be3aaecf38a71bf42e493af299b07f29c4324bcf9a77efe16f4b6e
+      SOURCE_URL: https://storage.googleapis.com/runable-templates/cli-uploads%2F6mxGjuIma2D7hI1HGIwXfbVq9iXocDlF%2F3FIkL16PuqZ3GbNFTy-qY%2FStatus_Operacional_fontes_build_0.3.0-test-r2.zip
+      SOURCE_SHA256: 648a052f694f89b3b83dd8c3cdb619cc0e7fc629330a0082aecd377da5315a93
       GRADLE_SHA256: 20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78
     steps:
       - name: Configurar Java 17
