@@ -1,0 +1,96 @@
+name: Status Operacional - APK de teste
+
+on:
+  push:
+    branches: [status-operacional-apk-2026-11-09]
+    paths: [.github/workflows/status-operacional-apk.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: status-operacional-test-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_URL: https://storage.googleapis.com/runable-templates/cli-uploads%2F6mxGjuIma2D7hI1HGIwXfbVq9iXocDlF%2Ftet8oZh5WfIhpLH1Tcoi2%2FStatus_Operacional_fontes_build_0.3.0-test.zip
+      SOURCE_SHA256: 5d0f1f2772be3aaecf38a71bf42e493af299b07f29c4324bcf9a77efe16f4b6e
+      GRADLE_SHA256: 20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78
+    steps:
+      - name: Configurar Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Baixar e verificar fontes revisados
+        shell: bash
+        run: |
+          mkdir -p delivery build-source
+          curl --fail --location --proto '=https' --tlsv1.2 "$SOURCE_URL" -o source.zip
+          printf '%s  source.zip\n' "$SOURCE_SHA256" | sha256sum --check
+          unzip -q source.zip -d build-source
+          cp build-source/StatusOperacional/BUILD_INFO.md delivery/
+          cp source.zip delivery/Status_Operacional_fontes.zip
+          echo 'APK debug; backend/client ID pendentes; sem dados ficticios.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preparar Gradle e SDK Android
+        shell: bash
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 https://services.gradle.org/distributions/gradle-8.13-bin.zip -o gradle.zip
+          printf '%s  gradle.zip\n' "$GRADLE_SHA256" | sha256sum --check
+          unzip -q gradle.zip -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.13/bin" >> "$GITHUB_PATH"
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > build-source/StatusOperacional/android/local.properties
+
+      - name: Executar testes JUnit e compilar APK debug
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle -p build-source/StatusOperacional/android --no-daemon --console=plain --stacktrace -Dorg.gradle.jvmargs='-Xmx4g -Dfile.encoding=UTF-8' testDebugUnitTest assembleDebug 2>&1 | tee delivery/gradle-build.log
+
+      - name: Verificar assinatura e identificar APK
+        shell: bash
+        run: |
+          APK=build-source/StatusOperacional/android/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          cp "$APK" delivery/Status_Operacional_0.3.0-test.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > delivery/assinatura-apk.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > delivery/identificacao-apk.txt
+          grep "name='com.grm.rotagrm'" delivery/identificacao-apk.txt
+          grep "application-label:'Status Operacional'" delivery/identificacao-apk.txt
+          python - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          files = list(Path('build-source/StatusOperacional/android/app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'))
+          assert files, 'Nenhum resultado JUnit encontrado'
+          tests = failures = errors = skipped = 0
+          for file in files:
+              root = ET.parse(file).getroot()
+              tests += int(root.attrib.get('tests', 0))
+              failures += int(root.attrib.get('failures', 0))
+              errors += int(root.attrib.get('errors', 0))
+              skipped += int(root.attrib.get('skipped', 0))
+          assert tests >= 9 and failures == 0 and errors == 0 and skipped == 0
+          Path('delivery/testes-android.txt').write_text(f'{tests} testes JUnit aprovados; falhas={failures}; erros={errors}; ignorados={skipped}\n')
+          PY
+          (cd delivery && sha256sum Status_Operacional_0.3.0-test.apk > APK_SHA256.txt)
+          cat delivery/testes-android.txt >> "$GITHUB_STEP_SUMMARY"
+          cat delivery/APK_SHA256.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Entregar APK e evidencias
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Status-Operacional-teste-${{ github.run_number }}
+          path: |
+            delivery/
+            build-source/StatusOperacional/android/app/build/test-results/testDebugUnitTest/
+          if-no-files-found: error
+          retention-days: 14
