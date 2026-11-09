@@ -46,7 +46,9 @@ jobs:
           printf '%s  gradle.zip\n' "$GRADLE_SHA256" | sha256sum --check
           unzip -q gradle.zip -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/gradle-8.13/bin" >> "$GITHUB_PATH"
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;36.0.0'
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > build-source/StatusOperacional/android/local.properties
 
       - name: Executar testes JUnit e compilar APK debug
