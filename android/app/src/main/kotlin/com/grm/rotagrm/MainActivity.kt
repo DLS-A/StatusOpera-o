@@ -8,7 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,8 +18,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.grm.rotagrm.notifications.OperationalNotifications
+import com.grm.rotagrm.notifications.PushRegistrationWorker
 import com.grm.rotagrm.settings.MonitoringSettingsRepository
 import com.grm.rotagrm.ui.OperationalScreen
+import com.grm.rotagrm.ui.StatusOperacionalTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
     }
     private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationsAllowed = granted || Build.VERSION.SDK_INT < 33
+        PushRegistrationWorker.enqueue(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +47,7 @@ class MainActivity : ComponentActivity() {
         settings = MonitoringSettingsRepository(this)
         notificationsAllowed = OperationalNotifications.hasPermission(this)
         setContent {
-            MaterialTheme {
+            StatusOperacionalTheme {
                 Surface(Modifier.fillMaxSize()) {
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     OperationalScreen(
@@ -61,6 +63,7 @@ class MainActivity : ComponentActivity() {
                         onStatusAlerts = { status, enabled -> viewModel.updateStatusAlerts(status, enabled) },
                         onRepeatMinutes = { viewModel.updateRepeatMinutes(it) },
                         onSound = { viewModel.updateAlertSound(it) },
+                        onVisual = { viewModel.updateAlertVisual(it) },
                         onRestoreSettings = viewModel::restoreSettings,
                     )
                 }
@@ -79,6 +82,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         notificationsAllowed = OperationalNotifications.hasPermission(this)
+        PushRegistrationWorker.enqueue(this)
     }
 
     private fun startLogin() {

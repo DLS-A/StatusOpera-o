@@ -1,0 +1,14 @@
+{
+  "checks": {
+    "python_ast": 23,
+    "kotlin_syntax": 19,
+    "xml": 1,
+    "json": 3,
+    "javascript_syntax": 1
+  },
+  "status": "passed",
+  "android_compilation": "not_run",
+  "android_junit": "not_run",
+  "device_runtime": "not_run",
+  "real_tls": "not_tested"
+}

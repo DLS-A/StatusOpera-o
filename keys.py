@@ -14,12 +14,11 @@ TOKEN_API_APONTAMENTOS_GRM_PUSH = os.getenv("TOKEN_API_APONTAMENTOS_GRM_PUSH", "
 CHAT_IDS_ALERTA = os.getenv("CHAT_IDS_ALERTA", "").strip()
 RECIPIENT_IDS_STATUS = os.getenv("RECIPIENT_IDS_STATUS", "").strip()
 
-if not URL_API_GRM or not TOKEN_API_APONTAMENTOS_GRM_PUSH:
-    raise EnvironmentError(
-        "Configuração GRM incompleta. Defina URL_API_GRM e "
-        "TOKEN_API_APONTAMENTOS_GRM_PUSH no ambiente do servidor."
-    )
-
-api_url = urlparse(URL_API_GRM)
-if api_url.scheme.lower() != "https" or not api_url.hostname or api_url.username or api_url.password:
-    raise EnvironmentError("URL_API_GRM deve usar HTTPS.")
+def validate_grm_configuration():
+    """Validate at use time: health checks and unit tests must not need a token."""
+    if not URL_API_GRM or not TOKEN_API_APONTAMENTOS_GRM_PUSH:
+        raise EnvironmentError("Configuração GRM incompleta no servidor.")
+    api_url = urlparse(URL_API_GRM)
+    if (api_url.scheme.lower() != "https" or not api_url.hostname or api_url.username or
+            api_url.password or api_url.query or api_url.fragment):
+        raise EnvironmentError("URL_API_GRM deve usar HTTPS sem credenciais ou parâmetros.")

@@ -1,0 +1,169 @@
+/home/user/rota-grm-test-deps/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_abertos_sao_selecionados_por_equipamento_sem_maior_fim_global (test_datetime_grm.DatasGRMTest.test_abertos_sao_selecionados_por_equipamento_sem_maior_fim_global) ... ok
+test_apontamento_aberto_nao_ganha_fim (test_datetime_grm.DatasGRMTest.test_apontamento_aberto_nao_ganha_fim) ... ok
+test_apontamento_que_atravessa_meia_noite (test_datetime_grm.DatasGRMTest.test_apontamento_que_atravessa_meia_noite) ... ok
+test_dois_apontamentos_preservam_fins_da_api (test_datetime_grm.DatasGRMTest.test_dois_apontamentos_preservam_fins_da_api) ... ok
+test_falha_de_consulta_preserva_estado_dos_alertas (test_datetime_grm.DatasGRMTest.test_falha_de_consulta_preserva_estado_dos_alertas) ... ok
+test_horarios_proximos_de_tres_horas (test_datetime_grm.DatasGRMTest.test_horarios_proximos_de_tres_horas) ... ok
+test_inicio_e_fim_em_dias_diferentes (test_datetime_grm.DatasGRMTest.test_inicio_e_fim_em_dias_diferentes) ... ok
+test_manutencao_exibe_data_de_abertura_da_api (test_datetime_grm.DatasGRMTest.test_manutencao_exibe_data_de_abertura_da_api) ... ok
+test_device_invalid_limits_rejected (test_backend_snapshot.BackendSnapshotTests.test_device_invalid_limits_rejected) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_device_payload_rejects_operational_fields (test_backend_snapshot.BackendSnapshotTests.test_device_payload_rejects_operational_fields) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_device_preferences_are_not_operational_writes (test_backend_snapshot.BackendSnapshotTests.test_device_preferences_are_not_operational_writes) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_device_registration_needs_authentication (test_backend_snapshot.BackendSnapshotTests.test_device_registration_needs_authentication) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_health_does_not_imply_operational_access (test_backend_snapshot.BackendSnapshotTests.test_health_does_not_imply_operational_access) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_http_transport_rejected_without_redirecting_token (test_backend_snapshot.BackendSnapshotTests.test_http_transport_rejected_without_redirecting_token) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_large_device_body_rejected (test_backend_snapshot.BackendSnapshotTests.test_large_device_body_rejected) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_logout_revokes_server_and_provider (test_backend_snapshot.BackendSnapshotTests.test_logout_revokes_server_and_provider) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_missing_bearer_is_rejected (test_backend_snapshot.BackendSnapshotTests.test_missing_bearer_is_rejected) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_no_valid_cache_returns_503 (test_backend_snapshot.BackendSnapshotTests.test_no_valid_cache_returns_503) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_operational_write_methods_rejected (test_backend_snapshot.BackendSnapshotTests.test_operational_write_methods_rejected) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_private_response_headers (test_backend_snapshot.BackendSnapshotTests.test_private_response_headers) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_session_endpoint_identifies_verified_identity (test_backend_snapshot.BackendSnapshotTests.test_session_endpoint_identifies_verified_identity) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_snapshot_includes_open_maintenance_alert_candidates (test_backend_snapshot.BackendSnapshotTests.test_snapshot_includes_open_maintenance_alert_candidates) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_snapshot_reads_never_poll_grm_or_write_database (test_backend_snapshot.BackendSnapshotTests.test_snapshot_reads_never_poll_grm_or_write_database) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_stale_snapshot_is_visible_but_not_ready (test_backend_snapshot.BackendSnapshotTests.test_stale_snapshot_is_visible_but_not_ready) ... Server configuration incomplete; operational endpoints remain protected
+ok
+test_expired_wrong_issuer_audience_and_missing_session (test_security_services.AuthTests.test_expired_wrong_issuer_audience_and_missing_session) ... ok
+test_http_credentials_query_and_fragment_urls_rejected (test_security_services.AuthTests.test_http_credentials_query_and_fragment_urls_rejected) ... ok
+test_missing_bearer (test_security_services.AuthTests.test_missing_bearer) ... ok
+test_provider_banned_user_denied (test_security_services.AuthTests.test_provider_banned_user_denied) ... ok
+test_provider_network_failure_and_no_redirect (test_security_services.AuthTests.test_provider_network_failure_and_no_redirect) ... ok
+test_revoked_session (test_security_services.AuthTests.test_revoked_session) ... ok
+test_service_role_and_secret_key_rejected (test_security_services.AuthTests.test_service_role_and_secret_key_rejected) ... ok
+test_session_database_failure_fails_closed (test_security_services.AuthTests.test_session_database_failure_fails_closed) ... ok
+test_unconfirmed_unlisted_and_mismatched_user (test_security_services.AuthTests.test_unconfirmed_unlisted_and_mismatched_user) ... ok
+test_verified_email_not_required_on_access_claim (test_security_services.AuthTests.test_verified_email_not_required_on_access_claim) ... ok
+test_wrong_client_and_role (test_security_services.AuthTests.test_wrong_client_and_role) ... ok
+test_wrong_signature (test_security_services.AuthTests.test_wrong_signature) ... ok
+test_auth_and_redirect_not_retried (test_security_services.GrmTests.test_auth_and_redirect_not_retried) ... ok
+test_connection_failure_exhausts_without_token_error_text (test_security_services.GrmTests.test_connection_failure_exhausts_without_token_error_text) ... ok
+test_empty_invalid_json_invalid_records_and_size_limit (test_security_services.GrmTests.test_empty_invalid_json_invalid_records_and_size_limit) ... ok
+test_get_only_original_query_and_redirect_block (test_security_services.GrmTests.test_get_only_original_query_and_redirect_block) ... ok
+test_transient_retries_bounded (test_security_services.GrmTests.test_transient_retries_bounded) ... ok
+test_baseline_new_event_and_generic_hash (test_security_services.PlannerTests.test_baseline_new_event_and_generic_hash) ... ok
+test_fcm_payload_contains_only_generic_data_and_no_notification_body (test_security_services.PlannerTests.test_fcm_payload_contains_only_generic_data_and_no_notification_body) ... /home/user/status-operacional-apk/backend/app/notifications.py:66: DeprecationWarning: Message.token is deprecated. Use Message.fid instead.
+  message = messaging.Message(token=device["token"], data=data,
+ok
+test_limit_matches_android_event_key_and_duration_fallback (test_security_services.PlannerTests.test_limit_matches_android_event_key_and_duration_fallback) ... ok
+test_visual_disabled_and_explicit_status_disabled (test_security_services.PlannerTests.test_visual_disabled_and_explicit_status_disabled) ... ok
+test_age_and_database_failure_suppress_alerts_preserve_last_valid (test_security_services.SnapshotTests.test_age_and_database_failure_suppress_alerts_preserve_last_valid) ... Shared snapshot update unavailable; preserving last valid snapshot
+ok
+test_empty_snapshot_can_be_confirmed (test_security_services.SnapshotTests.test_empty_snapshot_can_be_confirmed) ... ok
+test_recovery_clears_stale (test_security_services.SnapshotTests.test_recovery_clears_stale) ... ok
+test_restore_deep_copy_read_no_upstream_and_no_private_records (test_security_services.SnapshotTests.test_restore_deep_copy_read_no_upstream_and_no_private_records) ... ok
+test_unconfigured_kpi_not_invented (test_security_services.SnapshotTests.test_unconfigured_kpi_not_invented) ... ok
+test_allowlist_removed_before_delivery_cancels_queue (test_postgres_integration.PostgresIntegrationTests.test_allowlist_removed_before_delivery_cancels_queue) ... ok
+test_closed_maintenance_today_is_not_cancelled_by_current_equipment (test_postgres_integration.PostgresIntegrationTests.test_closed_maintenance_today_is_not_cancelled_by_current_equipment) ... ok
+test_cross_instance_concurrency_single_producer (test_postgres_integration.PostgresIntegrationTests.test_cross_instance_concurrency_single_producer) ... ok
+test_device_and_token_ownership (test_postgres_integration.PostgresIntegrationTests.test_device_and_token_ownership) ... ok
+test_failed_producer_preserves_snapshot_and_attempt (test_postgres_integration.PostgresIntegrationTests.test_failed_producer_preserves_snapshot_and_attempt) ... ok
+test_interval_blocks_duplicate_poll (test_postgres_integration.PostgresIntegrationTests.test_interval_blocks_duplicate_poll) ... ok
+test_migrations_and_private_role_permissions (test_postgres_integration.PostgresIntegrationTests.test_migrations_and_private_role_permissions) ... ok
+test_poll_persists_full_payload_and_restores_after_restart (test_postgres_integration.PostgresIntegrationTests.test_poll_persists_full_payload_and_restores_after_restart) ... ok
+test_queue_dedup_retry_and_success (test_postgres_integration.PostgresIntegrationTests.test_queue_dedup_retry_and_success) ... ok
+test_revocation_disables_session_devices_and_pending_alerts (test_postgres_integration.PostgresIntegrationTests.test_revocation_disables_session_devices_and_pending_alerts) ... ok
+
+----------------------------------------------------------------------
+Ran 60 tests in 0.691s
+
+OK
+[MONITOR] Consultando API...
+[MONITOR] Consulta indisponível; estado de alertas preservado.
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 1
+[MONITOR] Manutenções atuais (hoje/iniciadas): 1
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 0
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0
+[MONITOR] Pausas abertas: 1
+[MONITOR] Manutenções abertas: 0
+[MONITOR] Manutenções atuais (hoje/iniciadas): 0

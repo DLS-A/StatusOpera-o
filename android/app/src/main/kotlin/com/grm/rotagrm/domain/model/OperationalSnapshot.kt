@@ -6,11 +6,19 @@ data class OperationalSnapshot(
     val pauses: List<OperationalRecord>,
     val maintenance: List<OperationalRecord>,
     val maintenanceAlerts: List<OperationalRecord> = emptyList(),
+    val stale: Boolean = false,
+    val sourceAvailable: Boolean = true,
+    val persistenceAvailable: Boolean = true,
+    val lastAttemptAt: String? = null,
+    val refreshIntervalSeconds: Int = 60,
+    val receivedAtMillis: Long = System.currentTimeMillis(),
+    val cacheJson: String = "",
 )
 
 data class EquipmentStatus(
     val equipmentTag: String,
     val current: OperationalRecord?,
+    val operationalState: String = "unknown",
 )
 
 data class OperationalRecord(

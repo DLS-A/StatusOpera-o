@@ -27,3 +27,9 @@ local.properties
 *.p12
 *.pfx
 credentials*.json
+google-services.json
+*-service-account*.json
+*.apk
+*.aab
+*.ipa
+test-results*.txt

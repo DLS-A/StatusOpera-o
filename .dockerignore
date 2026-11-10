@@ -18,3 +18,11 @@ credentials*.json
 __pycache__/
 *.py[cod]
 .git/
+android/
+docs/
+supabase/
+test*.py
+*.apk
+*.aab
+google-services.json
+*-service-account*.json

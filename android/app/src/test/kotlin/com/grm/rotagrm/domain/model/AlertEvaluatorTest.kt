@@ -67,6 +67,34 @@ class AlertEvaluatorTest {
         assertEquals(hashed, alertStorageId("private-operational-id"))
     }
 
+    @Test
+    fun staleOrUnavailableSnapshotsNeverGenerateNewThresholdAlerts() {
+        val fresh = snapshot(record("p1", start))
+        listOf(fresh.copy(stale = true), fresh.copy(sourceAvailable = false),
+            fresh.copy(persistenceAvailable = false)).forEach { unavailable ->
+            assertTrue(AlertEvaluator.activeAlerts(unavailable, settings(), start + 20 * 60_000L).isEmpty())
+        }
+    }
+
+    @Test
+    fun maintenanceResetCreatesANewBaselineWithoutAlertingOldRecords() {
+        val tracker = NewMaintenanceTracker()
+        val maintenance = record("m1", start).copy(reasonName = "EXEC MANUT CORRETIVA")
+        tracker.update(emptyList())
+        assertEquals(listOf(maintenance), tracker.update(listOf(maintenance)))
+        tracker.reset()
+        assertTrue(tracker.update(listOf(maintenance)).isEmpty())
+        assertTrue(tracker.activeEvents.isEmpty())
+    }
+
+    @Test
+    fun missingStartUsesReportedDurationAndMatchesServerLimitKey() {
+        val pause = record("p1", start, duration = 901L).copy(startEpochMillis = null)
+        val alert = AlertEvaluator.activeAlerts(snapshot(pause), settings(), start).single()
+        assertEquals(1L, alert.exceededSeconds)
+        assertEquals("limit:p1:900", "limit:${alert.id}:${alert.limitSeconds}")
+    }
+
     private fun settings() = MonitoringSettings(
         limitsMinutesByStatus = mapOf(DEFAULT_PAUSE_STATUS to 15),
         alertsEnabledByStatus = mapOf(DEFAULT_PAUSE_STATUS to true),

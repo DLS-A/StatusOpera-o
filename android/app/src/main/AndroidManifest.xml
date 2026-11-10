@@ -4,9 +4,21 @@
 
     <application
         android:allowBackup="false"
-        android:label="ROTA GRM"
+        android:label="Status Operacional"
+        android:icon="@drawable/ic_equipment"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false">
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="${fcmEnabled}" />
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <service
+            android:name=".notifications.RotaFirebaseMessagingService"
+            android:exported="false"
+            android:enabled="${fcmEnabled}">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             android:exported="true">

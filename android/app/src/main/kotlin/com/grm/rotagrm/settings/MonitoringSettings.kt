@@ -24,6 +24,7 @@ data class MonitoringSettings(
     ),
     val repeatAlertMinutes: Int = DEFAULT_REPEAT_ALERT_MINUTES,
     val alertSoundEnabled: Boolean = true,
+    val alertVisualEnabled: Boolean = true,
     val acknowledgedAlertIds: Set<String> = emptySet(),
     val lastAlertNotificationAt: Map<String, Long> = emptyMap(),
 )
@@ -51,6 +52,7 @@ class MonitoringSettingsRepository(private val context: Context) {
                 preferences.booleanValuesWithPrefix(ALERT_PREFIX),
             repeatAlertMinutes = preferences[REPEAT_MINUTES] ?: DEFAULT_REPEAT_ALERT_MINUTES,
             alertSoundEnabled = preferences[SOUND_ENABLED] ?: true,
+            alertVisualEnabled = preferences[VISUAL_ENABLED] ?: true,
             acknowledgedAlertIds = preferences[ACKNOWLEDGED_ALERT_IDS] ?: emptySet(),
             lastAlertNotificationAt = preferences.longValuesWithPrefix(NOTIFIED_PREFIX),
         )
@@ -82,6 +84,10 @@ class MonitoringSettingsRepository(private val context: Context) {
 
     suspend fun setAlertSoundEnabled(enabled: Boolean) {
         context.monitoringDataStore.edit { it[SOUND_ENABLED] = enabled }
+    }
+
+    suspend fun setAlertVisualEnabled(enabled: Boolean) {
+        context.monitoringDataStore.edit { it[VISUAL_ENABLED] = enabled }
     }
 
     suspend fun setAlertAcknowledged(id: String, acknowledged: Boolean) {
@@ -128,6 +134,7 @@ class MonitoringSettingsRepository(private val context: Context) {
             preferences[REFRESH_INTERVAL] = DEFAULT_REFRESH_SECONDS
             preferences[REPEAT_MINUTES] = DEFAULT_REPEAT_ALERT_MINUTES
             preferences[SOUND_ENABLED] = true
+            preferences[VISUAL_ENABLED] = true
             preferences[ACKNOWLEDGED_ALERT_IDS] = emptySet()
             preferences[intPreferencesKey(LIMIT_PREFIX + DEFAULT_PAUSE_STATUS)] =
                 DEFAULT_ERGONOMIC_PAUSE_LIMIT_MINUTES
@@ -156,6 +163,7 @@ class MonitoringSettingsRepository(private val context: Context) {
         val REFRESH_INTERVAL = intPreferencesKey("refresh_interval_seconds")
         val REPEAT_MINUTES = intPreferencesKey("repeat_alert_minutes")
         val SOUND_ENABLED = booleanPreferencesKey("alert_sound_enabled")
+        val VISUAL_ENABLED = booleanPreferencesKey("alert_visual_enabled")
         val ACKNOWLEDGED_ALERT_IDS = stringSetPreferencesKey("acknowledged_alert_ids")
         const val NOTIFIED_PREFIX = "last_alert_notification_at:"
     }

@@ -15,6 +15,7 @@ data class OperationalAlert(
 
 object AlertEvaluator {
     fun activeAlerts(snapshot: OperationalSnapshot, settings: MonitoringSettings, nowEpochMillis: Long): List<OperationalAlert> {
+        if (snapshot.stale || !snapshot.sourceAvailable || !snapshot.persistenceAvailable) return emptyList()
         val records = snapshot.equipment.mapNotNull { it.current }
             .filter { it.id.isNotBlank() }
             .distinctBy { it.id }

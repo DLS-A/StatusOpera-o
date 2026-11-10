@@ -31,11 +31,13 @@ internal class SecureAuthStateStore(context: Context) {
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         val ciphertext = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
         val payload = cipher.iv + ciphertext
-        preferences.edit().putString(STATE_KEY, Base64.encodeToString(payload, Base64.NO_WRAP)).apply()
+        check(preferences.edit().putString(STATE_KEY, Base64.encodeToString(payload, Base64.NO_WRAP)).commit()) {
+            "Não foi possível persistir a sessão cifrada."
+        }
     }
 
     fun clear() {
-        preferences.edit().remove(STATE_KEY).apply()
+        check(preferences.edit().remove(STATE_KEY).commit()) { "Não foi possível remover a sessão local." }
     }
 
     private fun getOrCreateKey(): SecretKey {

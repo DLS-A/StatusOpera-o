@@ -39,12 +39,18 @@ object OperationalNotifications {
         }
     }
 
-    fun post(context: Context, alert: OperationalAlert, soundEnabled: Boolean): Boolean {
+    fun post(context: Context, alert: OperationalAlert, soundEnabled: Boolean, repeatMillis: Long? = null): Boolean {
+        val eventKey = if (alert.maintenanceEvent) "maintenance:${alert.id.removePrefix("maintenance:")}" else "limit:${alert.id}:${alert.limitSeconds}"
+        return postGeneric(context, alertStorageId(eventKey), alertStorageId(alert.id), soundEnabled, repeatMillis)
+    }
+
+    fun postGeneric(context: Context, eventHash: String, alertHash: String, soundEnabled: Boolean, repeatMillis: Long? = null): Boolean {
         if (!hasPermission(context)) return false
         createChannels(context)
+        return PushDeliveryStore(context).post(eventHash, alertHash, repeatMillis) {
         val openApp = PendingIntent.getActivity(
             context,
-            alert.id.hashCode(),
+            alertHash.take(8).toLong(16).toInt(),
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -55,22 +61,18 @@ object OperationalNotifications {
             Notification.Builder(context)
         }
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle(if (alert.maintenanceEvent) "Nova manutenção: ${alert.equipmentTag}" else "Limite excedido: ${alert.equipmentTag}")
-            .setContentText(
-                if (alert.maintenanceEvent) alert.status
-                else "${alert.status}: excedido em ${formatDuration(alert.exceededSeconds)}",
-            )
-            .setStyle(Notification.BigTextStyle().bigText(
-                if (alert.maintenanceEvent) "Equipamento ${alert.equipmentTag}\nNova manutenção: ${alert.status}"
-                else "Equipamento ${alert.equipmentTag}\n${alert.status}\nTempo excedido: ${formatDuration(alert.exceededSeconds)}",
-            ))
+            .setContentTitle("Status Operacional — aviso")
+            .setContentText("Há uma atualização de monitoramento. Abra o aplicativo para consultar.")
+            .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setCategory(Notification.CATEGORY_ALARM)
             .setAutoCancel(true)
             .setContentIntent(openApp)
             .build()
-        context.getSystemService(NotificationManager::class.java).notify(notificationId(alert.id), notification)
-        return true
+        context.getSystemService(NotificationManager::class.java).notify(alertHash.take(8).toLong(16).toInt(), notification)
+        }
     }
+
+    fun cancelAll(context: Context) { context.getSystemService(NotificationManager::class.java).cancelAll() }
 
     fun cancel(context: Context, id: String) {
         context.getSystemService(NotificationManager::class.java).cancel(notificationId(id))

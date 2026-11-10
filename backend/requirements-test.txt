@@ -1,0 +1,5 @@
+ -r requirements.txt
+httpx==0.28.1
+# Used only by the optional source-syntax verifier, not by the backend runtime.
+tree-sitter==0.26.0
+tree-sitter-kotlin==1.1.0

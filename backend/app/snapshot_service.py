@@ -1,0 +1,116 @@
+"""Snapshots are refreshed by a shared server loop, never by each phone."""
+import asyncio
+from copy import deepcopy
+from datetime import datetime, timezone
+import logging
+import threading
+
+from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
+                       obter_manutencoes_abertas, obter_manutencoes_atuais,
+                       obter_pausas_ergonomicas_abertas)
+
+log = logging.getLogger(__name__)
+
+
+def public_record(item):
+    start = item.get("_inicio_dt")
+    return {"id": str(item["id"]), "equipmentTag": str(item.get("equipmentTag") or ""),
+            "reasonName": str(item.get("reasonName") or ""), "startDate": item.get("startDate"),
+            "startEpochMillis": int(start.timestamp() * 1000) if start else None,
+            "endDate": item.get("endDate"),
+            "durationSeconds": calcular_duracao_segundos(start, item.get("_fim_dt")),
+            **{name: str(item.get(name) or "") for name in
+               ("operator", "location", "equipmentType", "kpiCategory")}}
+
+
+def build_snapshot(records, settings=None):
+    current = {r["equipmentTag"]: r for r in obter_apontamentos_abertos(records)}
+    tags = sorted({str(r["equipmentTag"]) for r in records if r.get("equipmentTag")})
+    def state(tag):
+        category = current.get(tag, {}).get("kpiCategory")
+        if settings and category in settings.operating_categories:
+            return "operating"
+        if settings and category in settings.stopped_categories:
+            return "stopped"
+        return "unknown"
+    return {"updatedAt": datetime.now(timezone.utc).isoformat(),
+            "equipment": [{"equipmentTag": tag, "operationalState": state(tag), "current": public_record(current[tag]) if tag in current else None} for tag in tags],
+            "pauses": [public_record(r) for r in obter_pausas_ergonomicas_abertas(records)],
+            "maintenance": [public_record(r) for r in obter_manutencoes_abertas(records)],
+            "maintenanceAlerts": [public_record(r) for r in obter_manutencoes_atuais(records)],
+            "records": [public_record(r) for r in records]}
+
+
+class SnapshotService:
+    def __init__(self, settings, store, client, notifier=None, clock=None):
+        self.settings, self.store, self.client, self.notifier = settings, store, client, notifier
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self._lock = threading.Lock()
+        self._poll_lock = threading.Lock()
+        self._payload = None
+        self._attempt = None
+        self._failed = True
+        self._database_available = False
+
+    def _set(self, result):
+        payload, state = result
+        with self._lock:
+            if payload is not None:
+                self._payload = payload
+            self._attempt = state.get("attempted_at")
+            self._failed = bool(state.get("failed", True))
+            self._database_available = True
+
+    def restore(self):
+        try:
+            self._set(self.store.latest())
+        except Exception:
+            with self._lock:
+                self._database_available = False
+            log.warning("Snapshot persistence unavailable during restore")
+
+    def refresh(self):
+        if not self._poll_lock.acquire(blocking=False):
+            return
+        try:
+            def produce():
+                records = self.client.fetch()
+                return records, build_snapshot(records, self.settings)
+            self._set(self.store.poll(produce))
+        except Exception:
+            with self._lock:
+                self._failed = True
+                self._database_available = False
+            log.warning("Shared snapshot update unavailable; preserving last valid snapshot")
+        finally:
+            self._poll_lock.release()
+        response = self.read()
+        if self.notifier and response and not response["stale"]:
+            try:
+                self.notifier.process(response)
+            except Exception:
+                log.warning("Notification processing unavailable")
+
+    def read(self):
+        with self._lock:
+            if self._payload is None:
+                return None
+            response = deepcopy(self._payload)
+            response.pop("records", None)
+            try:
+                age = max(0, (self.clock() - datetime.fromisoformat(response["updatedAt"].replace("Z", "+00:00"))).total_seconds())
+            except (KeyError, ValueError, TypeError):
+                return None
+            response.update({"stale": self._failed or not self._database_available or age > self.settings.stale_after,
+                             "ageSeconds": int(age), "serverTime": self.clock().isoformat(),
+                             "lastAttemptAt": self._attempt.isoformat() if self._attempt else None,
+                             "sourceAvailable": not self._failed and age <= self.settings.stale_after,
+                             "persistenceAvailable": self._database_available,
+                             "refreshIntervalSeconds": self.settings.interval})
+            return response
+
+    async def run(self):
+        # A background loop is application functionality, not an agent polling loop.
+        while True:
+            await asyncio.to_thread(self.refresh)
+            await asyncio.sleep(self.settings.interval)

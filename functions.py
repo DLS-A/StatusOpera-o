@@ -7,7 +7,7 @@ import json
 import time
 import re
 
-from keys import URL_API_GRM, TOKEN_API_APONTAMENTOS_GRM_PUSH, TOKEN_BOT_GRM
+from keys import URL_API_GRM, TOKEN_API_APONTAMENTOS_GRM_PUSH, TOKEN_BOT_GRM, validate_grm_configuration
 
 INTERVALO_MONITORAMENTO = 60
 
@@ -102,6 +102,7 @@ def export_json(content, name_file="content"):
 
 
 def buscar_dados():
+    validate_grm_configuration()
     now_utc = datetime.now(tz=timezone.utc)
     now_date_time = now_utc.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     inicio_dia_local = datetime.combine(
@@ -122,7 +123,7 @@ def buscar_dados():
     }
 
     try:
-        response = requests.get(url, params=params, timeout=30)
+        response = requests.get(url, params=params, timeout=30, allow_redirects=False)
     except requests.exceptions.Timeout:
         raise RuntimeError("Timeout ao consultar API GRM.") from None
     except requests.exceptions.ConnectionError:

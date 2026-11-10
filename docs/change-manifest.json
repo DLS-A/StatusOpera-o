@@ -1,0 +1,479 @@
+{
+  "original_preserved": true,
+  "canonical_android_module": "android",
+  "excluded_from_copy": [
+    "original env/logs",
+    "historical operational JSON/cache",
+    "old APK/builds",
+    "duplicate ROTA_GRM_ANDROID"
+  ],
+  "summary": {
+    "added": 23,
+    "modified": 32,
+    "unchanged": 22
+  },
+  "files": [
+    {
+      "path": ".dockerignore",
+      "state": "modified",
+      "sha256": "90c96f0c7075dcb29e7774f528093b4e3580815694ff2ae941e1416abc8d45dd",
+      "original_sha256": "9635267eea70a72bd9270ea489ef5f4236e124e24f2b8db4cc47910ee141b9eb"
+    },
+    {
+      "path": ".env.example",
+      "state": "modified",
+      "sha256": "33dcedbd07394ec8e57d918d13307727e3dbf9e507358ce3b58ef464c9a5e7f4",
+      "original_sha256": "151dac78cfadbf1476179feb2560c4e879fd045ce00173ce174477d8fbae28dd"
+    },
+    {
+      "path": ".gitignore",
+      "state": "modified",
+      "sha256": "5226c979d62e6cb4a83ce4f1ffc24b2cef3a021773d30595083c137dae386a2c",
+      "original_sha256": "3971da54d0ecfd0a5fd8f22000ffcfed2f981911762df33362677a48fbe3b53b"
+    },
+    {
+      "path": "CONTINUIDADE_APP.md",
+      "state": "modified",
+      "sha256": "ab0b2bca071c625e9c326ea075a1cc1579d6bc2449042129b94885e118cbc9d1",
+      "original_sha256": "3a91b0fea6340fab02968b915313f9de09ffb2609dcb35e7221acc6b13cc816d"
+    },
+    {
+      "path": "README.md",
+      "state": "modified",
+      "sha256": "55341bef16381a3a1bb28c7e56f12f93ed6181c05fd190d75820ed761c48f270",
+      "original_sha256": "2390559a86641fb7c79673b79efe583592fd81cc19bbaf72523b4710bf3161ce"
+    },
+    {
+      "path": "_test_api_pattern.py",
+      "state": "unchanged",
+      "sha256": "65ec7158818a41be7e64d74d07bba5e460897059849ca62f613a45f65d5b275e",
+      "original_sha256": "65ec7158818a41be7e64d74d07bba5e460897059849ca62f613a45f65d5b275e"
+    },
+    {
+      "path": "android/README.md",
+      "state": "modified",
+      "sha256": "2bb5fac191fca162faf57a17c24a86c090dec8db552b3bbd2e8cd87350fc6460",
+      "original_sha256": "6de7eb8e9a873e98f6d9d50b7e4379752d6a8a27d848b51d21ae7c90f720ffa1"
+    },
+    {
+      "path": "android/app/build.gradle.kts",
+      "state": "modified",
+      "sha256": "f80874e50e9683476d2420290feb4aad46716a8194040cfd3df250f044a939f3",
+      "original_sha256": "764429e6e520567cd0216333c51dc8f12c71f6fe2a40f61671d343f761e47ccd"
+    },
+    {
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "state": "modified",
+      "sha256": "94fbd1fe07c700e8e8af125dda34102ae2f5877093ac5faf9a97835da56966a5",
+      "original_sha256": "95a974ab5a182f6a374d863b4dedca949e1dd86d55f01efd4674ab52571478ca"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/MainActivity.kt",
+      "state": "modified",
+      "sha256": "0476c565158cab844066f3bd7c907ee16125809aba1b36e173d6107d432aca9e",
+      "original_sha256": "719d80ecb841c221ff04ad0cdeae93b52760f0b9cf397c1148684c1c0ef0b41a"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/OperationalViewModel.kt",
+      "state": "modified",
+      "sha256": "1160bcec73c90306dbfebf86acb50bf4bf298f71a07dd26f1f6f1e8bf7d435fe",
+      "original_sha256": "a422878885e366c9ba9b85bf06315376675334806e3e2bbc5955935ca738c621"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/auth/OidcAuthManager.kt",
+      "state": "modified",
+      "sha256": "8837e45fa99f25fae493319487d18fae7684712abd04cff6c185d310a86d2a74",
+      "original_sha256": "63f1e8f5021f3afe58eac8368b15cab62eddcfb721a4f635cfc9902f21de670e"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/auth/SecureAuthStateStore.kt",
+      "state": "modified",
+      "sha256": "db0405a316e6255c410a17c51c8f3cc2a846d2f2021b2499176e10e6852d34f5",
+      "original_sha256": "2acf4559e6ece711049c7d6a2992ad6e80af92e5f86373123456671f6d0d1cbf"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/data/EncryptedOperationalStore.kt",
+      "state": "added",
+      "sha256": "2d3af74b23966c16f76e90bbe779db88031cb6acdbde3d877cf3980ff678ae88",
+      "original_sha256": null
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/data/HttpOperationalRepository.kt",
+      "state": "modified",
+      "sha256": "1c93f97738ebb35bfeedc98f616443681953071e14c6958b98a27e6b9a9a38f8",
+      "original_sha256": "4ba6e786e659373ec17250d2c0e618c1e1ed176bde2935eafd91214aa2ab92af"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/domain/model/OperationalAlert.kt",
+      "state": "modified",
+      "sha256": "60899c232de92de2860e8a6e145da5208f31b411e38643151ba99379e9d575ce",
+      "original_sha256": "f9ba7805ea56dfba9a63089b6c60533f057ef26bd2e081e322ce2c33d23dec1a"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/domain/model/OperationalSnapshot.kt",
+      "state": "modified",
+      "sha256": "7323fd1a17526e6a17c088d552d3df129b5de0f6a08e4dedb968fa70c366c74c",
+      "original_sha256": "15b17de859baa07a0eaf49d3509da9520a72809e70f49191d803502349961e51"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/domain/repository/OperationalRepository.kt",
+      "state": "unchanged",
+      "sha256": "322f9eb05f3061248917a0815fbddc0ea182d21af2392444525b452517b9b14d",
+      "original_sha256": "322f9eb05f3061248917a0815fbddc0ea182d21af2392444525b452517b9b14d"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/notifications/OperationalNotifications.kt",
+      "state": "modified",
+      "sha256": "f68540eff5fa9102c437be12a4d1d7201860218f7d9bd91bf01d3d08ca2aab60",
+      "original_sha256": "42df46164ae35282fae9f012270b6253439ae78ff48b9d461f05a1d4dbe20475"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/notifications/PushDeliveryStore.kt",
+      "state": "added",
+      "sha256": "0d5be2d9699e01232b8ee05ed25f8e196ddca7750ee1c0e85c123370211f5fc8",
+      "original_sha256": null
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/notifications/PushRegistrationWorker.kt",
+      "state": "added",
+      "sha256": "82c83c85ef3ee0ea17217d900fe7152bc90ba487e3af650c9792ba8fce6a629c",
+      "original_sha256": null
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/notifications/RotaFirebaseMessagingService.kt",
+      "state": "added",
+      "sha256": "08c7f8b696f48556821c52f3543d0e660fa75e3bba5c955ae759032021ed107b",
+      "original_sha256": null
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/settings/MonitoringSettings.kt",
+      "state": "modified",
+      "sha256": "de1c2561962f88f7e191bfc173b02d69b0587fee1673864f3187a4d978301a9c",
+      "original_sha256": "a6e9f6517aa6fbeb85d37bc02e643e06c02406666c0f642f962bb81eb960be8c"
+    },
+    {
+      "path": "android/app/src/main/kotlin/com/grm/rotagrm/ui/OperationalScreen.kt",
+      "state": "modified",
+      "sha256": "3c127fdee53a5660326d24b76a29f3acd3daa98de2a204e3855f1a7b9c7966e5",
+      "original_sha256": "c60fbe01333d631933733b74d3d0249e93fef7c12262a0a8494dd0ef9c44e6b7"
+    },
+    {
+      "path": "android/app/src/test/kotlin/com/grm/rotagrm/domain/model/AlertEvaluatorTest.kt",
+      "state": "modified",
+      "sha256": "ff5cd7f28067e2f7fecdd88f56dc92b5ae4727b454c39818f48e17101156bbcf",
+      "original_sha256": "224c2b6555d6609dd703e7722c93adcd5fc673c1a8712c12ce7f932e23bb7883"
+    },
+    {
+      "path": "android/build.gradle.kts",
+      "state": "modified",
+      "sha256": "5d007ab14a73f49ae4f57fdebf88e301a0a7cf1a27b7f7b0c6bbc3a9c4406c98",
+      "original_sha256": "8e4eb4cc45be008eb3e338320fa57f57a78033d7088d97016f21d17fbaf25337"
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-cli.jar",
+      "state": "unchanged",
+      "sha256": "30ac68b710f79f797d23e6d7cff3291553903d5e94b0ed56f32e86c399e31fbd",
+      "original_sha256": "30ac68b710f79f797d23e6d7cff3291553903d5e94b0ed56f32e86c399e31fbd"
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-wrapper-main.jar",
+      "state": "unchanged",
+      "sha256": "9219345804fe690d4e7fe4c6404ad56b2cdcab225e7782db429ef1238e53d91f",
+      "original_sha256": "9219345804fe690d4e7fe4c6404ad56b2cdcab225e7782db429ef1238e53d91f"
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-wrapper-shared.jar",
+      "state": "unchanged",
+      "sha256": "4e208eff4b63c24b9b6a3ec05ccc5f7edffce5b771f832d17a445c0593fe6677",
+      "original_sha256": "4e208eff4b63c24b9b6a3ec05ccc5f7edffce5b771f832d17a445c0593fe6677"
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-wrapper.jar",
+      "state": "unchanged",
+      "sha256": "9219345804fe690d4e7fe4c6404ad56b2cdcab225e7782db429ef1238e53d91f",
+      "original_sha256": "9219345804fe690d4e7fe4c6404ad56b2cdcab225e7782db429ef1238e53d91f"
+    },
+    {
+      "path": "android/gradle/wrapper/gradle-wrapper.properties",
+      "state": "unchanged",
+      "sha256": "70fa201501995e6f45c0c475def71093f8115849344c48322ca997cfddba8534",
+      "original_sha256": "70fa201501995e6f45c0c475def71093f8115849344c48322ca997cfddba8534"
+    },
+    {
+      "path": "android/gradle.properties",
+      "state": "unchanged",
+      "sha256": "c3154e3d5f1a042cf9c144e754b436fd100b11dfa2a71a9a4fc5772f8f5c5661",
+      "original_sha256": "c3154e3d5f1a042cf9c144e754b436fd100b11dfa2a71a9a4fc5772f8f5c5661"
+    },
+    {
+      "path": "android/gradlew",
+      "state": "unchanged",
+      "sha256": "2bd6c01ba9a8ff99a7076c03b0d9d9612886207afb262a6ca9b9183b1a4b2a57",
+      "original_sha256": "2bd6c01ba9a8ff99a7076c03b0d9d9612886207afb262a6ca9b9183b1a4b2a57"
+    },
+    {
+      "path": "android/gradlew.bat",
+      "state": "unchanged",
+      "sha256": "8f56426c44e1abd6a6774dabc87ebbf91a9610b80874684b466d2017a44a46d9",
+      "original_sha256": "8f56426c44e1abd6a6774dabc87ebbf91a9610b80874684b466d2017a44a46d9"
+    },
+    {
+      "path": "android/rota-public.properties",
+      "state": "added",
+      "sha256": "c7e2dd44a2562021b627c8936273eb914552a54986850aae0fde0843b3126c85",
+      "original_sha256": null
+    },
+    {
+      "path": "android/settings.gradle.kts",
+      "state": "unchanged",
+      "sha256": "db7514f41eec489bdb47c89b78fd7b46f5342f8ee2cb837bd1cfd8c8e59228ab",
+      "original_sha256": "db7514f41eec489bdb47c89b78fd7b46f5342f8ee2cb837bd1cfd8c8e59228ab"
+    },
+    {
+      "path": "backend/Dockerfile",
+      "state": "modified",
+      "sha256": "86680c6e5f008db796dded33fa0bb7691a98a95a814796a3ac56bab74d29b92e",
+      "original_sha256": "bf0352bd62695b76bb67bc24dad7f2d5da067361867039556bdd058906646cdf"
+    },
+    {
+      "path": "backend/__init__.py",
+      "state": "unchanged",
+      "sha256": "b9a1b2afd02fd701c03b49be66174df32c9afe9daa9c4a473c558086fb12489f",
+      "original_sha256": "b9a1b2afd02fd701c03b49be66174df32c9afe9daa9c4a473c558086fb12489f"
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "state": "unchanged",
+      "sha256": "a4ee4594cd63817af15cc29357c85d6ba3f2fad4919135eba558b6be4a2b4079",
+      "original_sha256": "a4ee4594cd63817af15cc29357c85d6ba3f2fad4919135eba558b6be4a2b4079"
+    },
+    {
+      "path": "backend/app/auth.py",
+      "state": "modified",
+      "sha256": "5ca91649841ae8fb8b3b42a398806fd54489f80d720eb003432e6afa68545812",
+      "original_sha256": "98e54ca7de67a4e00c48caa147a5d6b9c006c802dbbc0a81586cecff95d110ee"
+    },
+    {
+      "path": "backend/app/database.py",
+      "state": "modified",
+      "sha256": "6e278a881b9109a020fd3412c0069992f4afadaabf0c2ef6c138812780306530",
+      "original_sha256": "a856bab20c5f078878bb4f5dd655dee0f4d006328823d0dbde5aa4c9cd1d68ca"
+    },
+    {
+      "path": "backend/app/grm_client.py",
+      "state": "added",
+      "sha256": "62a38120fab4d332700f508cc3fac5254a0955a9339dc5585efedc4de5d02734",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/app/main.py",
+      "state": "modified",
+      "sha256": "4d87f81c7eace3fd21d02350d95fc392e4550b8cc19ae8d5124a20ede507d2ae",
+      "original_sha256": "054b1070f66401e74ba6da22640efb28eddcd5e809d54e1e60f602773fad1dda"
+    },
+    {
+      "path": "backend/app/notifications.py",
+      "state": "added",
+      "sha256": "16cbee419b43410b4101dbbcd377b764ac8eba70cfe1b9b2ab83a286bb0c9aab",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/app/oauth_consent.html",
+      "state": "modified",
+      "sha256": "386550c4261f8e2d957c41bce18d082a4427b50a0a9ef6fedaff9fee58c5d6ae",
+      "original_sha256": "83ee4e49c2b45bd99fcaface7f93b3fe7c47960ffbe76f742a54e3e2820579d2"
+    },
+    {
+      "path": "backend/app/oauth_consent.js",
+      "state": "modified",
+      "sha256": "9af50d3a4627943ada3854c8b95c28a42304627c6e7cc6655f3d69d4e0f10fc9",
+      "original_sha256": "12f1c855bc1aaa59bbea0814016d734e05a4ef75fd6c8440cf32ab57c43abc58"
+    },
+    {
+      "path": "backend/app/settings.py",
+      "state": "added",
+      "sha256": "36f0031e72ee0bfec04fd099305780f312dc3d2861d0a0f3ed082b33a9a4e685",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/app/snapshot_service.py",
+      "state": "added",
+      "sha256": "1b39a6e77168c4e33c168ce0bde74b18c82c6c2906458a32b6ba958a51e51135",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/app/store.py",
+      "state": "added",
+      "sha256": "fe66bfa0beb55f921eb79e1c8b2fd47ced62d1835a5980d26376c005203d9ae9",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/requirements-test.txt",
+      "state": "added",
+      "sha256": "6111907b580e4da01d0c7e6470a22dfed7d1de99fc75c8048d79e4b472ef6086",
+      "original_sha256": null
+    },
+    {
+      "path": "backend/requirements.txt",
+      "state": "modified",
+      "sha256": "8f35535f9bf4bd01ce264d0cd13c4f7ad75ebb3135d2375d39f635ab58401fd5",
+      "original_sha256": "79a3600e55f5a9b099d88ea2c69cb2eafb24f956f91a1276e060b1a2a3902c93"
+    },
+    {
+      "path": "bot_start.py",
+      "state": "unchanged",
+      "sha256": "f64e9fb931106390e98a037758bd8dfa3b4bf24d3853f33b9bda616bfbea4ffc",
+      "original_sha256": "f64e9fb931106390e98a037758bd8dfa3b4bf24d3853f33b9bda616bfbea4ffc"
+    },
+    {
+      "path": "docs/instalacao.md",
+      "state": "added",
+      "sha256": "9f14cb561f02ba91c8271770647b8ffe6b88b4cc2c32ddcd13ca35582a8a9fae",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/original-file-hashes.json",
+      "state": "added",
+      "sha256": "cc35293d5ea8200fe96fad24fed283afbe10c2fb6baa2834800fc015d5618ad0",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/security-checks.json",
+      "state": "added",
+      "sha256": "600c6a4ecc91e40b771de40600925fc98c5d10107cb7d70173ee2191a5d64860",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/static-checks.json",
+      "state": "added",
+      "sha256": "118a9327ad240b44fb7fcdb79ece73f263a784e6fe284209cf17a2a29d980da0",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/test-results.txt",
+      "state": "added",
+      "sha256": "83474e6caafba1c13103c911eee2384734cebcb04141ba82d956d11cabf9fd8c",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/uso.md",
+      "state": "added",
+      "sha256": "bc90b13fafe0a55963709743232e2b638f588f4b3af2aa89c9cbc2c8bf42c69c",
+      "original_sha256": null
+    },
+    {
+      "path": "docs/validacao.md",
+      "state": "added",
+      "sha256": "e8e750109d13a43849b646e9940248255eccfd115fbefe8026abbbdc2f71fe09",
+      "original_sha256": null
+    },
+    {
+      "path": "functions.py",
+      "state": "modified",
+      "sha256": "89bd9c6eacf96308d47b924f8b15f7348b5694c9c4c172dddf1319879a4307be",
+      "original_sha256": "422999cbfbb0b1310340c90fcf1a95236f0d508f293e68cc1a31504a5242b777"
+    },
+    {
+      "path": "gitignore.txt",
+      "state": "unchanged",
+      "sha256": "ea811091083adabfcdd991ca5c324c0690a80129664aea364f89903285beac43",
+      "original_sha256": "ea811091083adabfcdd991ca5c324c0690a80129664aea364f89903285beac43"
+    },
+    {
+      "path": "keyboards.py",
+      "state": "unchanged",
+      "sha256": "5356243e6ebf272f01cda8c9885838bce915e689e54caf8c5c4bc01334b640d4",
+      "original_sha256": "5356243e6ebf272f01cda8c9885838bce915e689e54caf8c5c4bc01334b640d4"
+    },
+    {
+      "path": "keys.py",
+      "state": "modified",
+      "sha256": "96f923ce8efd7c396a571e8b8bc5e0369c839ce3c0595954d7597d973368898e",
+      "original_sha256": "0549ee4a41b2bcdfcbcfa8bd71fcf84a12a93e166981a54f3c6d31bc325ce6b6"
+    },
+    {
+      "path": "monitor.py",
+      "state": "modified",
+      "sha256": "b5287723233290d385b5b0ed7b56ac6b199e1b6446127fffc5258524f0d41f55",
+      "original_sha256": "f1bf6fb778eb2e9510c5134e6c1a9bb897bdfcd2167dff114bacf5a2dc39d60f"
+    },
+    {
+      "path": "quick_validate.py",
+      "state": "unchanged",
+      "sha256": "197f0948f97a3c239938323540fe746ce59e576cba17341c9d1f56fd474376db",
+      "original_sha256": "197f0948f97a3c239938323540fe746ce59e576cba17341c9d1f56fd474376db"
+    },
+    {
+      "path": "render.yaml",
+      "state": "modified",
+      "sha256": "f38e90fc79d1f5fcae64ed928843536d668bb154bf01afd7b4f174e7e89cc23b",
+      "original_sha256": "9e02913a5fbc05251f2f47eb3e1da76493485cb36f80efcea6918270504c6232"
+    },
+    {
+      "path": "requirements.txt",
+      "state": "unchanged",
+      "sha256": "69ffdaee210d25151c6830d9215d17cb70c07ba86397c6a77f7f22a49aa44e8e",
+      "original_sha256": "69ffdaee210d25151c6830d9215d17cb70c07ba86397c6a77f7f22a49aa44e8e"
+    },
+    {
+      "path": "scripts/verify_sources.py",
+      "state": "added",
+      "sha256": "c1e142b29a74e8242fc576c8da83f34dab5259d43eff29cecfe9a87bb8dbec04",
+      "original_sha256": null
+    },
+    {
+      "path": "supabase/migrations/20261023162717_create_operational_history.sql",
+      "state": "unchanged",
+      "sha256": "989aa7b3f984f91905c34c27559986845fdf81eb1ff17e05e4aefa13c727d830",
+      "original_sha256": "989aa7b3f984f91905c34c27559986845fdf81eb1ff17e05e4aefa13c727d830"
+    },
+    {
+      "path": "supabase/migrations/20261023162855_index_snapshot_record_references.sql",
+      "state": "unchanged",
+      "sha256": "0294feb60126d0130c6fe1aa5f1a907b999553b89d645b8af1f66a99c637f6ad",
+      "original_sha256": "0294feb60126d0130c6fe1aa5f1a907b999553b89d645b8af1f66a99c637f6ad"
+    },
+    {
+      "path": "supabase/migrations/20261103130000_secure_shared_snapshots.sql",
+      "state": "added",
+      "sha256": "93c3cf546d9e49439be256450f46bf6061819130a0dc509149ff9475a27291fc",
+      "original_sha256": null
+    },
+    {
+      "path": "task.md",
+      "state": "added",
+      "sha256": "255c94b74c51719995b58e97d3e013cf31fec6b1560e6e63ddfa3e4634d428e6",
+      "original_sha256": null
+    },
+    {
+      "path": "test_backend_snapshot.py",
+      "state": "modified",
+      "sha256": "261211e2d45b7920c806cdb075c4703d9c8bf3448c56c16db8682b52dc451f2d",
+      "original_sha256": "86ebf723600f617f2044ee5142db2f31880e2345e5651ffb2a1619d554228dce"
+    },
+    {
+      "path": "test_datetime_grm.py",
+      "state": "unchanged",
+      "sha256": "52b68f37d6d8daa4d3b21dfcb1eb21e9cbe1ec468889be88162716f543e47672",
+      "original_sha256": "52b68f37d6d8daa4d3b21dfcb1eb21e9cbe1ec468889be88162716f543e47672"
+    },
+    {
+      "path": "test_postgres_integration.py",
+      "state": "added",
+      "sha256": "a6d70fa6372c179ac6485901bd3d12acae934063e81cd3de4db849b15744928d",
+      "original_sha256": null
+    },
+    {
+      "path": "test_security_services.py",
+      "state": "added",
+      "sha256": "8eb768cf55f0d0333dd6ae377e39f205dafa123af428b7af33686f753bd725e8",
+      "original_sha256": null
+    },
+    {
+      "path": "validate_bot.py",
+      "state": "unchanged",
+      "sha256": "e2fc849e00a3da7f69094e1f75d6f9dfcd91e881bc33400c1b70e6d9b9af0657",
+      "original_sha256": "e2fc849e00a3da7f69094e1f75d6f9dfcd91e881bc33400c1b70e6d9b9af0657"
+    }
+  ]
+}

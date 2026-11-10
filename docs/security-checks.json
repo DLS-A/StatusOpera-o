@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "original_zip_sha256": "b410d3be9ed17387496e138d1c43334b12922f96b69c53f1519889305c2d75d7",
+  "original_zip_file_entries_verified": 89,
+  "copied_source_original_hashes_verified": 54,
+  "known_private_values_scanned": 2,
+  "known_private_value_matches": 0,
+  "forbidden_artifact_matches": 0,
+  "scope": "Exact/URL-encoded known original private values; not a guarantee of detection of every possible secret",
+  "original_modified": false,
+  "deploy_performed": false,
+  "apk_build_performed": false,
+  "external_operational_tests_performed": false
+}

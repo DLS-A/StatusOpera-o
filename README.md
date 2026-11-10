@@ -1,61 +1,62 @@
-# Bot de Status Operacional GRM
+# ROTA GRM — fontes atualizadas
 
-## Continuidade do app Android
+**Entrega de código, não de aplicativo instalado.** Trabalho executado em cópia separada do projeto recebido. Mantidos Kotlin/Jetpack Compose/Material 3, FastAPI, Supabase e Render; módulo canônico `android/`. O original não foi editado. Não há APK novo, deploy ou validação operacional real nesta entrega.
 
-O estado, as pendências e o passo a passo detalhado de publicação do backend, configuração Supabase/OIDC, build e validação estão em [CONTINUIDADE_APP.md](CONTINUIDADE_APP.md).
-Para a distribuição interna manual do APK assinado, siga também [LANCAMENTO_MANUAL.md](LANCAMENTO_MANUAL.md).
-Para o fluxo de uso previsto e a lista do que falta para chegar ao app completo, consulte [TUTORIAL_FUNCIONAMENTO_APP.md](TUTORIAL_FUNCIONAMENTO_APP.md).
+## Mudanças principais
 
-O bot Python legado foi preservado. O app Android em `android/` consulta dados pelo servico autenticado em `backend/`. As credenciais da API GRM ficam no ambiente do servidor; o backend falha fechado se o provedor OIDC nao estiver configurado ou disponivel.
+- Consulta GRM GET centralizada por ciclo, com coordenação PostgreSQL entre instâncias; celulares apenas leem o snapshot compartilhado.
+- Payload persistido, restauração após reinício e último snapshot válido marcado como desatualizado durante falhas.
+- JWT assimétrico, cliente/audience/issuer, usuário confirmado e autorizado, sessão ativa e revogação local do servidor.
+- Cache Android cifrado por usuário; isolamento entre sessões, cancelamento de consultas, logout e erros 401/403 tratados.
+- Cinco abas e Material 3 preservados; banner de frescor e contagens operacionais apenas com categorias KPI confirmadas.
+- FCM opcional, registro de dispositivo autorizado, fila privada e payload genérico; desabilitado por padrão.
 
-## Seguranca e configuracao Python
+## Antes de usar
 
-1. Mantenha valores privados no `.env` local ou nas variaveis do servidor. Nunca os copie para `keys.py`, Kotlin, logs ou APK.
-2. Use `.env.example` somente como modelo.
-3. A API GRM deve usar HTTPS. A configuracao rejeita URLs sem HTTPS.
-4. Para iniciar o bot legado, configure `TOKEN_BOT_GRM` e `CHAT_IDS_ALERTA`.
+1. **Revogar e substituir credenciais expostas** em `env`/logs do projeto original. Esses arquivos não foram incluídos. Exclusão do pacote não revoga tokens.
+2. Seguir [instalação administrativa](docs/instalacao.md): Supabase, migrations, CA/TLS, Render/OAuth, Firebase opcional e assinatura externa.
+3. Preencher os identificadores públicos de `android/rota-public.properties` uma vez por build. Não configurar a API por celular, nem colocar token GRM/senha do banco no APK.
+4. Executar [validação operacional](docs/validacao.md). Login real, GRM/Supabase, FCM/aparelho e Android build/runtime continuam pendentes.
 
-O `start_bot.bat` usa a pasta do proprio script. Falhas DNS do Telegram sao tratadas com repeticao progressiva e logs sem o texto bruto das excecoes HTTP.
+## Organização
 
-## Backend
+| Diretório/arquivo | Função |
+|---|---|
+| `android/` | Aplicativo nativo, versão de fontes 0.2.0, sem binário compilado |
+| `backend/app/` | API autenticada, snapshots compartilhados, sessões e FCM |
+| `supabase/migrations/` | Três migrations ordenadas, tabelas operacionais privadas |
+| `render.yaml`, `backend/Dockerfile` | Preparação de um serviço existente; não executar sem autorização administrativa |
+| `.env.example` | Modelo sem segredos preenchidos |
+| `test_*.py`, `backend/requirements-test.txt` | Testes locais isolados |
+| `docs/` | Instalação, uso, validação, resultados e manifestos |
+| `bot_start.py`, `monitor.py`, `functions.py` | Bot legado separado; não faz parte do loop de snapshots do app |
 
-Instale `backend/requirements.txt` no ambiente virtual e configure no servidor:
+## API
 
-- `URL_API_GRM` e `TOKEN_API_APONTAMENTOS_GRM_PUSH`;
-- `SUPABASE_DB_URL` com a URI Postgres do projeto Supabase (somente no servidor; SSL e exigido);
-- `OIDC_ISSUER`, `OIDC_AUDIENCE`, `OIDC_CLIENT_ID` e `OIDC_ALLOWED_EMAILS` para Supabase Auth OAuth Server.
+- Público: `GET /healthz` (somente processo); páginas `/oauth/consent` e `/oauth/consent.js`.
+- Bearer obrigatório: `GET /v1/snapshot`, `/v1/readiness`, `/v1/session`.
+- Sessão/notificação: `POST /v1/session/logout`, `PUT`/`DELETE /v1/devices/{uuid}`.
+- Nenhuma escrita operacional GRM. POST/PUT/PATCH/DELETE no snapshot retornam 405.
+- `/v1/snapshot` não consulta GRM nem grava histórico; leitura autenticada continua verificando usuário e sessão. Sem snapshot válido: 503. Último válido disponível em falha: 200 com `stale=true`.
+- `healthz=200` não comprova login, banco, GRM, atualização ou push. OpenAPI permanece desativado.
 
-O backend pode ser publicado no Render pelo `render.yaml`. Configure as chaves na secao Environment do servico. O OAuth Server do Supabase deve usar assinatura JWT assimetrica, client mobile publico com redirect `com.grm.rotagrm:/oauth2redirect`, site URL apontando para o backend Render e caminho `/oauth/consent`. A tela de consentimento usa somente contas Supabase existentes; o backend restringe o acesso aos emails verificados configurados em `OIDC_ALLOWED_EMAILS`. O cliente Supabase do navegador usa apenas a publishable key, que e publica; nunca use uma secret/service role key no app ou na tela.
+## Testes
 
-Execute localmente:
+Instalar dependências de teste em ambiente isolado e executar:
 
-```powershell
-python -m pip install -r backend/requirements.txt
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+```sh
+python -m pip install -r backend/requirements-test.txt
+python -m unittest -v test_datetime_grm test_backend_snapshot test_security_services
 ```
 
-`GET /healthz` verifica somente o processo. `GET /v1/snapshot` exige token Bearer com assinatura assimetrica OIDC valida, issuer e audience esperados, client ID do app e email verificado presente no allowlist. OpenAPI fica desativado.
+A integração PostgreSQL requer opt-in explícito e banco **local descartável** `rota_grm_local_test`; não lê a URL Supabase:
 
-Cada consulta autenticada grava um resumo em `operational.snapshot_runs` e atualiza os apontamentos vistos em `operational.records`, preservando quando cada registro apareceu pela primeira vez. As tabelas ficam no schema privado `operational`, com RLS ligado e sem acesso para os papeis da API publica. Configure a URI no ambiente do backend; nao use a senha do banco no Android. Se o servidor nao alcancar o banco, `/v1/snapshot` retorna 503 em vez de confirmar uma consulta sem persistencia. A migration aplicada esta em `supabase/migrations/`.
+```sh
+RUN_LOCAL_POSTGRES=1 python -m unittest -v test_postgres_integration
+```
 
-Para deploy, construa `docker build -f backend/Dockerfile -t rota-grm-backend .`, injete segredos em runtime e mantenha o servico em rede privada atras de proxy TLS.
+Consulte [resultados completos](docs/test-results.txt) e [limites de evidência](docs/validacao.md). Parsing estático Kotlin não é compilação, teste JUnit executado nem validação visual. Os testes Android presentes devem ser executados fora deste sandbox.
 
-## Android e estado atual
+## Limites importantes
 
-- O build debug foi concluido. APK: `android/app/build/outputs/apk/debug/app-debug.apk`.
-- O app implementa login OIDC com PKCE, sessao cifrada com AES-GCM/Android Keystore, consulta autenticada HTTPS, busca/detalhes/timers de equipamento, telas de pausas/manutencoes e configuracoes DataStore com alertas locais por limite.
-- Para conectar, configure as propriedades Gradle documentadas em `android/README.md`, cadastre o cliente Android publico no provedor OIDC e publique o backend.
-- O polling e alertas locais ocorrem em primeiro plano. Alertas com o app suspenso requerem monitoramento no servidor e push, ainda pendentes.
-- A regra distinta do bot para novas manutencoes do dia foi conectada ao filtro existente no backend e deduplicada por ID no app. Push com o app suspenso e assinatura de producao ainda requerem configuracao e validacao.
-
-Confirme timestamps e unidade com dados reais do GRM antes do uso operacional. Os dados e logs antigos foram preservados; revise-os conforme a politica da operacao. Novas consultas nao exportam automaticamente o conteudo operacional para arquivo JSON.
-
-## Validacao e proximas dependencias
-
-- Validacao executada: 6 testes unitarios Android e 12 testes Python (8 do bot e 4 do backend), sem falhas; `assembleDebug` passou.
-- Nao havia celular ou emulador conectado para validar a interface, permissao de notificacao e som no Android real.
-- Login e snapshot com dados reais ainda exigem backend publicado e propriedades OIDC configuradas. Nao envie tokens GRM ou chaves privadas pelo chat.
-- Push com o app suspenso exige um projeto Firebase/FCM e credenciais de servidor configuradas fora do APK. O APK atual so consulta em primeiro plano.
-- A distribuicao de producao exige uma chave de assinatura fornecida e guardada pelo operador; o APK existente e de depuracao.
-# StatusOpera-o
-
+O contrato GRM preserva a janela do início do dia anterior em São Paulo até agora UTC. Registros abertos anteriores à janela podem não ser retornados; não foi inventado filtro ou ampliada a janela. Notificações não substituem monitoramento de segurança: FCM, rede, permissões, bateria e servidor podem impedir entrega. Não há promessa de push após force-stop. Nenhum serviço pago foi contratado ou alterado.

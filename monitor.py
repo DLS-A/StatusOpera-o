@@ -73,6 +73,9 @@ def iniciar_monitoramento(bot=None):
                 salvar_log(e)
                 time.sleep(INTERVALO_MONITORAMENTO)
 
+    with _lock_monitoramento:
+        if _thread_monitoramento is not None and _thread_monitoramento.is_alive():
+            return _thread_monitoramento
         _thread_monitoramento = threading.Thread(target=loop_monitoramento, daemon=True, name="grm-alert-monitor")
         _thread_monitoramento.start()
         return _thread_monitoramento

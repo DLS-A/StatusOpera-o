@@ -16,7 +16,7 @@ services:
       - key: SUPABASE_URL
         value: https://byjmnvnojwssjswyeybj.supabase.co
       - key: SUPABASE_PUBLISHABLE_KEY
-        value: sb_publishable_DpH0j0BJrByHzz_pLN90ug_KIthZROF
+        sync: false
       - key: OIDC_ISSUER
         value: https://byjmnvnojwssjswyeybj.supabase.co/auth/v1
       - key: OIDC_AUDIENCE
@@ -25,3 +25,17 @@ services:
         sync: false
       - key: OIDC_ALLOWED_EMAILS
         sync: false
+      # Trust forwarding headers only on Render's proxy-only container ingress.
+      # For other hosting, replace * with the exact trusted proxy addresses.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      - key: PGSSLROOTCERT
+        value: /etc/secrets/supabase-ca.crt
+      - key: SNAPSHOT_INTERVAL_SECONDS
+        value: "60"
+      - key: SNAPSHOT_STALE_SECONDS
+        value: "120"
+      - key: SNAPSHOT_RETENTION_DAYS
+        value: "7"
+      - key: FCM_ENABLED
+        value: "false"

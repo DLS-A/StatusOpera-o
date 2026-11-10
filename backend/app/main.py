@@ -1,138 +1,201 @@
-"""Authenticated snapshot endpoint; GRM credentials remain server-side."""
-
-from datetime import datetime, timezone
+"""Read-only operational API; session/device writes never reach the GRM API."""
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from html import escape
 import logging
 import os
 from pathlib import Path
+from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.responses import HTMLResponse, Response
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.security import HTTPBearer
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from functions import (
-    calcular_duracao_segundos,
-    obter_apontamentos_abertos,
-    obter_manutencoes_abertas,
-    obter_manutencoes_atuais,
-    obter_pausas_ergonomicas_abertas,
-    api_content_formatted,
-)
-from .auth import require_user
-from .database import persist_snapshot
+from .auth import require_user, provider_logout, public_key
+from .grm_client import GrmClient
+from .notifications import FirebaseNotifier
+from .settings import Settings, https_url
+from .snapshot_service import SnapshotService
+from .store import PostgresStore
 
-
-app = FastAPI(
-    title="ROTA GRM API",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
-)
-_logger = logging.getLogger(__name__)
-_bearer = HTTPBearer(auto_error=False)
+log = logging.getLogger(__name__)
+bearer = HTTPBearer(auto_error=False)
 
 
-def _authenticated_user(credentials: HTTPAuthorizationCredentials | None = Depends(_bearer)):
-    return require_user(credentials)
+@asynccontextmanager
+async def lifespan(app):
+    task = None
+    app.state.service = None
+    app.state.store = None
+    try:
+        settings = Settings.from_env()
+        store = PostgresStore(settings)
+        notifier = FirebaseNotifier(store) if settings.push_enabled else None
+        service = SnapshotService(settings, store, GrmClient(settings), notifier)
+        app.state.store, app.state.service = store, service
+        await asyncio.to_thread(service.restore)
+        task = asyncio.create_task(service.run())
+    except Exception:
+        log.warning("Server configuration incomplete; operational endpoints remain protected")
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
 
-def _public_record(item: dict) -> dict:
-    start = item.get("startDate")
-    end = item.get("endDate")
-    start_at = item.get("_inicio_dt")
-    return {
-        "id": str(item.get("id", "")),
-        "equipmentTag": str(item.get("equipmentTag", "")),
-        "reasonName": str(item.get("reasonName", "")),
-        "startDate": start,
-        "startEpochMillis": int(start_at.timestamp() * 1000) if start_at is not None else None,
-        "endDate": end,
-        "durationSeconds": calcular_duracao_segundos(item.get("_inicio_dt"), item.get("_fim_dt")),
-        "operator": str(item.get("operator", "")),
-        "location": str(item.get("location", "")),
-        "equipmentType": str(item.get("equipmentType", "")),
-        "kpiCategory": str(item.get("kpiCategory", "")),
-    }
+app = FastAPI(title="ROTA GRM API", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+
+
+def get_store(request: Request):
+    store = getattr(request.app.state, "store", None)
+    if store is None:
+        raise HTTPException(503, "Serviço operacional indisponível.")
+    return store
+
+
+def authenticated_user(request: Request, credentials=Depends(bearer)):
+    # Missing bearer must return 401 even on an unconfigured server.
+    if credentials is None:
+        return require_user(None)
+    return require_user(credentials, getattr(request.app.state, "store", None))
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request, exception):
+    codes = {401: "AUTH_REQUIRED", 403: "ACCESS_DENIED", 405: "METHOD_NOT_ALLOWED", 503: "SERVICE_UNAVAILABLE"}
+    message = str(exception.detail)
+    return JSONResponse({"error": {"code": codes.get(exception.status_code, "REQUEST_FAILED"), "message": message}, "detail": message},
+                        status_code=exception.status_code, headers=exception.headers or {})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exception):
+    return JSONResponse({"error": {"code": "INVALID_REQUEST", "message": "Requisição inválida."}}, status_code=422)
+
+
+@app.middleware("http")
+async def protect_transport(request: Request, call_next):
+    operational = request.url.path.startswith(("/v1/", "/oauth/"))
+    if operational and request.url.scheme != "https":
+        return JSONResponse({"error": {"code": "HTTPS_REQUIRED", "message": "HTTPS obrigatório."}}, status_code=400)
+    if operational and request.method in ("POST", "PUT", "PATCH"):
+        content = bytearray()
+        async for chunk in request.stream():
+            content.extend(chunk)
+            if len(content) > 65536:
+                return JSONResponse({"error": {"code": "BODY_TOO_LARGE", "message": "Requisição excede o limite."}}, status_code=413)
+        request._body = bytes(content)
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.error("Unhandled request failure (details suppressed)")
+        response = JSONResponse({"error": {"code": "INTERNAL_ERROR", "message": "Falha interna do serviço."}}, status_code=500)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    if operational:
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
 
 
 @app.get("/healthz")
 def healthz():
-    # Liveness only; does not reveal upstream or configuration details.
     return {"status": "ok"}
 
 
-@app.get("/oauth/consent", response_class=HTMLResponse, include_in_schema=False)
-def oauth_consent():
-    supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
-    publishable_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
-    if not supabase_url.startswith("https://") or not publishable_key:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Login indisponível.")
-
-    page = Path(__file__).with_name("oauth_consent.html").read_text(encoding="utf-8")
-    page = page.replace("__SUPABASE_URL__", escape(supabase_url, quote=True))
-    page = page.replace("__SUPABASE_PUBLISHABLE_KEY__", escape(publishable_key, quote=True))
-    return HTMLResponse(
-        page,
-        headers={
-            "Cache-Control": "no-store",
-            "Referrer-Policy": "no-referrer",
-            "X-Content-Type-Options": "nosniff",
-            "Content-Security-Policy": (
-                "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; "
-                "script-src 'self' https://esm.sh; style-src 'unsafe-inline'; "
-                "connect-src 'self' https://byjmnvnojwssjswyeybj.supabase.co"
-            ),
-        },
-    )
-
-
-@app.get("/oauth/consent.js", include_in_schema=False)
-def oauth_consent_script():
-    script = Path(__file__).with_name("oauth_consent.js").read_text(encoding="utf-8")
-    return Response(
-        script,
-        media_type="text/javascript",
-        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-    )
+@app.get("/v1/readiness")
+def readiness(request: Request, claims=Depends(authenticated_user)):
+    service = getattr(request.app.state, "service", None)
+    snapshot = service.read() if service else None
+    if not snapshot or snapshot["stale"]:
+        raise HTTPException(503, "Dados operacionais ainda não estão disponíveis ou atualizados.")
+    return {"status": "ready", "updatedAt": snapshot["updatedAt"]}
 
 
 @app.get("/v1/snapshot")
-def snapshot(_claims: dict = Depends(_authenticated_user)):
+def snapshot(request: Request, claims=Depends(authenticated_user)):
+    service = getattr(request.app.state, "service", None)
+    result = service.read() if service else None
+    if result is None:
+        raise HTTPException(503, "Nenhum snapshot válido disponível.")
+    # No GRM request or database write here. All devices receive the shared result.
+    return result
+
+
+@app.get("/v1/session")
+def session(claims=Depends(authenticated_user)):
+    return {"userId": claims["sub"], "sessionId": claims["session_id"], "email": claims["email"]}
+
+
+@app.post("/v1/session/logout")
+def logout(claims=Depends(authenticated_user), credentials=Depends(bearer), store=Depends(get_store)):
+    store.revoke_session(claims)
+    return {"serverRevoked": True, "providerRevoked": provider_logout(credentials.credentials)}
+
+
+class Preferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    limitsMinutesByStatus: dict[str, int] = Field(default_factory=lambda: {"PAUSA ERGONOMICA": 15})
+    alertsEnabledByStatus: dict[str, bool] = Field(default_factory=dict)
+    soundEnabled: bool = True
+    visualEnabled: bool = True
+
+    @field_validator("limitsMinutesByStatus", "alertsEnabledByStatus")
+    @classmethod
+    def valid_statuses(cls, value):
+        if len(value) > 100 or any(not name.strip() or len(name) > 150 for name in value):
+            raise ValueError("Invalid status preferences")
+        return value
+
+    @field_validator("limitsMinutesByStatus")
+    @classmethod
+    def valid_limits(cls, value):
+        if any(not 1 <= minutes <= 1440 for minutes in value.values()):
+            raise ValueError("Invalid limit")
+        return value
+
+
+class DeviceRegistration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=20, max_length=4096, pattern=r"^[A-Za-z0-9_:\-]+$")
+    preferences: Preferences = Field(default_factory=Preferences)
+
+
+@app.put("/v1/devices/{device_id}")
+def register_device(device_id: UUID, body: DeviceRegistration, claims=Depends(authenticated_user), store=Depends(get_store)):
     try:
-        records = api_content_formatted()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Não foi possível consultar os dados GRM.",
-        ) from None
+        store.register_device(claims, device_id, body.token, body.preferences.model_dump())
+    except PermissionError:
+        raise HTTPException(403, "Dispositivo sem autorização.") from None
+    return {"registered": True}
 
-    open_records = obter_apontamentos_abertos(records)
-    latest_by_tag = {record["equipmentTag"]: record for record in open_records}
-    tags = sorted({str(record.get("equipmentTag", "")) for record in records if record.get("equipmentTag")})
-    equipment = []
-    for tag in tags:
-        current = latest_by_tag.get(tag)
-        equipment.append({"equipmentTag": tag, "current": _public_record(current) if current else None})
 
-    pauses = [_public_record(item) for item in obter_pausas_ergonomicas_abertas(records)]
-    maintenance = [_public_record(item) for item in obter_manutencoes_abertas(records)]
-    maintenance_alerts = [_public_record(item) for item in obter_manutencoes_atuais(records)]
-    public_records = [_public_record(item) for item in records]
+@app.delete("/v1/devices/{device_id}")
+def remove_device(device_id: UUID, claims=Depends(authenticated_user), store=Depends(get_store)):
+    store.remove_device(claims, device_id)
+    return {"removed": True}
+
+
+@app.get("/oauth/consent", response_class=HTMLResponse)
+def oauth_consent():
     try:
-        persist_snapshot(records, public_records)
-    except Exception as error:
-        _logger.error("Falha ao persistir snapshot operacional (%s).", type(error).__name__)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="N\u00e3o foi poss\u00edvel salvar os dados operacionais.",
-        ) from None
+        supabase = https_url(os.getenv("SUPABASE_URL", ""))
+        key = public_key()
+    except ValueError:
+        raise HTTPException(503, "Login indisponível.") from None
+    page = Path(__file__).with_name("oauth_consent.html").read_text(encoding="utf-8")
+    page = page.replace("__SUPABASE_URL__", escape(supabase, quote=True)).replace("__SUPABASE_PUBLISHABLE_KEY__", escape(key, quote=True))
+    return HTMLResponse(page, headers={"Content-Security-Policy":
+        "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; "
+        f"script-src 'self' https://esm.sh; style-src 'unsafe-inline'; connect-src 'self' {supabase}"})
 
-    return {
-        "updatedAt": datetime.now(timezone.utc).isoformat(),
-        "equipment": equipment,
-        "pauses": pauses,
-        "maintenance": maintenance,
-        # Preserves the legacy alert rule: only maintenance opened today in the
-        # project's configured America/Sao_Paulo timezone is eligible.
-        "maintenanceAlerts": maintenance_alerts,
-    }
+
+@app.get("/oauth/consent.js")
+def oauth_script():
+    return Response(Path(__file__).with_name("oauth_consent.js").read_text(encoding="utf-8"), media_type="text/javascript")
