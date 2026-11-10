@@ -1,4 +1,4 @@
-name: Status Operacional - APK 0.6 monitor sem Firebase
+name: Status Operacional - APK 0.6 monitor e datas verificadas
 
 on:
   push:

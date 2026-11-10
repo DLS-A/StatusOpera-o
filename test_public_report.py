@@ -130,6 +130,25 @@ class PublicReportTests(TestCase):
         self.assertEqual(1,len(result['maintenance']))
         self.assertFalse(result['maintenance'][0]['startConfirmed'])
 
+    def test_history_cache_drops_unrelated_records_and_moving_cutoff_versions(self):
+        from backend.app.grm_client import GrmClient
+        from backend.app.settings import Settings
+        now=datetime.now(timezone.utc);shift=now-timedelta(hours=3);opening=now-timedelta(days=6)
+        def current(end):
+            return [self.row('m','CB-312','EXEC MANUT CORRETIVA',shift,end),self.row('o','EQ','OPERANDO',shift,end)]
+        history=[self.row('prior','CB-312','OPERANDO',opening-timedelta(minutes=1),opening),
+                 self.row('m','CB-312','EXEC MANUT CORRETIVA',opening,shift),
+                 self.row('previous','EQ','DISPONIVEL PARA OPERAR',shift-timedelta(minutes=1),shift)]
+        history += [self.row('irrelevant-'+str(i),'OLD','OPERANDO',opening,shift) for i in range(50)]
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        responses=[current(now),history]+[current(now+timedelta(minutes=i)) for i in range(1,10)]
+        with patch.object(client,'_fetch_window',side_effect=responses):
+            for i in range(10):
+                result=client.fetch()
+                self.assertFalse(any(str(r['id']).startswith('irrelevant') for r in result))
+                self.assertLessEqual(len(client._history),5)
+                self.assertTrue(build_snapshot(result)['maintenance'][0]['startConfirmed'])
+
     def test_public_reads_no_code_no_bearer_and_no_operational_writes(self):
         with patch.dict('os.environ',{'AUTH_MODE':'public'}), TestClient(app,base_url='https://testserver') as client:
             service=Mock();store=Mock();app.state.service=service;app.state.store=store

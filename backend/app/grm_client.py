@@ -23,16 +23,19 @@ class GrmClient:
         self.sleep = sleeper
         self._history = []
         self._history_attempt = 0.0
+        self._failed_history_keys = set()
 
     def fetch(self):
         records = self._fetch_window(1)
         active = current_records(records)
         keys = {record_key(r) for r in active}
-        known = {record_key(r) for r in self._history}
+        known = {record_key(r) for r in self._history} - self._failed_history_keys
+        missing = {record_key(r) for r in active if record_key(r) not in known
+                   and not original_start(records, r).get('_start_confirmed')}
         now = time.monotonic()
         # Historical bootstrap is bounded and cached, never 7 days every minute.
         # Failure to retrieve history must not erase valid current operation.
-        if keys - known and (not self._history_attempt or now - self._history_attempt >= 3600):
+        if missing and (not self._history_attempt or now - self._history_attempt >= 3600):
             self._history_attempt = now
             try:
                 # Retain source slices for still-active IDs across later windows.
@@ -45,14 +48,21 @@ class GrmClient:
                 # Older slices come in separate bounded 7-day queries, rather
                 # than one unbounded download. Stop once openings are confirmed.
                 for end_days in (7, 14, 21):
-                    unresolved = [r for r in active if record_key(r) in keys - known
+                    unresolved = [r for r in active if record_key(r) in missing
                         and not original_start(self._history + records, r).get('_start_confirmed')]
                     if not unresolved:
                         break
                     self._history.extend(self._fetch_window(end_days + 7, end_days))
+                self._failed_history_keys.difference_update(missing)
             except GrmUnavailable:
-                pass
-        self._history = list({(record_key(r), r['_inicio_dt'], r.get('_fim_dt')): r for r in self._history}.values())
+                self._failed_history_keys.update(missing)
+        # Persist/cache only slices of current IDs and their exact predecessors,
+        # not four weeks of unrelated operation in every minute's snapshot.
+        relevant = [r for r in self._history + records if record_key(r) in keys]
+        event_starts = {(r['equipmentTag'], r['_inicio_dt']) for r in relevant}
+        relevant += [r for r in self._history + records if record_key(r) not in keys
+                     and (r['equipmentTag'], r.get('_fim_dt')) in event_starts]
+        self._history = list({(record_key(r), r['_inicio_dt']): r for r in relevant}.values())
         starts = {record_key(r): r['_inicio_dt'] for r in active}
         history = []
         for part in self._history:
@@ -63,9 +73,8 @@ class GrmClient:
                 copy['endDate'] = int(copy['_fim_dt'].timestamp() * 1000)
                 history.append(copy)
             # Predecessors confirm an actual opening rather than query boundary.
-            elif part['equipmentTag'] in {r['equipmentTag'] for r in active} and part.get('_fim_dt'):
-                if all(part['_fim_dt'] < r['_inicio_dt'] for r in active if r['equipmentTag'] == part['equipmentTag']):
-                    history.append(part)
+            elif record_key(part) not in keys and (part['equipmentTag'], part.get('_fim_dt')) in event_starts:
+                history.append(part)
         return sorted(history + records, key=chave_inicio_apontamento)
 
     def _fetch_window(self, days, end_days_ago=0):
