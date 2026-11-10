@@ -294,7 +294,7 @@ private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPe
                     TextButton(onClick = { onLimit(status, 60) }) { Text("Configurar limite de 60 min") }
                 } else ValueStepper("Limite", "$limit min", limit, 1, 1440, 1) { onLimit(status, it) }
                 val checked = settings.alertsEnabledByStatus[status] ?: if (ergonomicStatus(status)) settings.alertsEnabledByStatus[DEFAULT_PAUSE_STATUS] ?: false else false
-                PreferenceSwitch(if (maintenanceStatus(status)) "Alertar quando iniciar hoje" else "Alertar ao exceder", checked) { onAlerts(status, it) }
+                PreferenceSwitch(if (maintenanceStatus(status)) "Alertar novo apontamento" else "Alertar ao exceder", checked) { onAlerts(status, it) }
             }
         }
         item { SectionHeading("Notificações") }
@@ -311,10 +311,10 @@ private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPe
         item {
             OutlinePanel {
                 Text(if (BuildConfig.FCM_ENABLED) "Push habilitado nesta compilação" else "Push desabilitado nesta compilação", color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                Text("Alertas e repetição locais dependem de consulta autorizada em primeiro plano. Não há garantia após force-stop.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                Text("Alertas e repetição locais funcionam durante o uso em primeiro plano. Sem push com o app fechado.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }
-        item { Text("Versão ${BuildConfig.VERSION_NAME} · ${if (state.configured) "configuração definida" else "backend/client ID pendentes"}", color = MutedText, style = MaterialTheme.typography.labelSmall) }
+        item { Text("Versão ${BuildConfig.VERSION_NAME} · ${if (state.configured) "acesso livre" else "servidor pendente"}", color = MutedText, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

@@ -1,4 +1,10 @@
-# Status Operacional — ativação por telefone
+# Status Operacional — acesso livre
+
+## Versão atual 0.5.0-test
+
+Sem login nem código. Equipamentos com apontamento atual, quatro tipos de manutenção e pausas ergonômicas/alertas corrigidos conforme o relatório real da API. Consulte [acesso livre e correções](docs/acesso-livre.md), que prevalece sobre todos os documentos de autenticação anteriores.
+
+O backend é público para leitura; token GRM e senha do banco permanecem privados no servidor. Escritas não foram liberadas. Os detalhes abaixo descrevem a versão histórica 0.4.0, não o fluxo de acesso atual.
 
 **Backend publicado e dados reais validados.** Mantidos Kotlin/Jetpack Compose/Material 3, FastAPI, Supabase e Render; módulo canônico `android/`. Original e GitHub main preservados. Nesta versão, um código compartilhado ativa cada telefone uma única vez, sem e-mail/login. Consulte [ativação e implantação atual](docs/ativacao.md), que prevalece sobre os documentos históricos de OAuth.
 

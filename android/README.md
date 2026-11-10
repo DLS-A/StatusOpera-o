@@ -1,5 +1,9 @@
 # ROTA GRM — Android existente
 
+## Atual: 0.5.0-test, versionCode 5 — sem autenticação
+
+Instale e abra. O código da versão anterior não é necessário. Consulte [acesso livre](../docs/acesso-livre.md). Backend público para leitura, credenciais GRM/banco somente no servidor. Apontamentos atuais, quatro manutenções e pausas/alertas corrigidos. A documentação restante é histórica.
+
 ## Versão atual: 0.4.0-test, versionCode 4
 
 Kotlin/Jetpack Compose/Material 3 preservados. A URL real do backend já está configurada. Ativação por código uma vez por telefone, sem e-mail/login, sem AppAuth. Compilação externa no GitHub Actions. Consulte [documentação atual](../docs/ativacao.md).

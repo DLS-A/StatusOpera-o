@@ -1,4 +1,13 @@
-# Status Operacional — build de teste 0.4.0-test
+# Status Operacional — build de teste 0.5.0-test
+
+## Correção atual: acesso livre e relatório GRM
+- versionCode5, sem login/código; URL real preservada.
+- Leitura pública do snapshot/readiness; escritas não liberadas; ativação desativada.
+- Corte final móvel do relatório tratado como apontamento atual, em vez de exigir endDate nulo. CB-303 corretiva e CB-310 preventiva confirmados nas duas abas.
+- Quatro tipos de manutenção, incluindo AG MANUTENCAO e preventiva250h com espaços variáveis.
+- Pausas atuais alimentam tela e alertas; duração evita inflação por fuso. 72 testes Python locais aprovados; testes Android adicionais no build externo.
+- Servidor corrigido live, 93 apontamentos atuais/16 manutenções na verificação. Sem pausa aberta no momento; regressões cobrem chegada/encerramento.
+- docs/acesso-livre.md prevalece. Os registros abaixo são históricos da versão com ativação.
 
 ## Atualização operacional — 10/11/2026
 - URL real https://status-operacional-api.onrender.com configurada; backend free publicado e validado com GRM/Supabase reais.
