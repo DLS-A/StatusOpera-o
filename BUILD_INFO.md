@@ -5,7 +5,9 @@
 - Ativação única por código compartilhado; credenciais individuais cifradas por telefone; sem e-mail/login/OAuth no APK; código apenas em entrega privada.
 - versionCode 4; tema sem barra Android duplicada; FCM desabilitado.
 - 67 testes Python/integração PostgreSQL local aprovados; smoke remoto de ativação/snapshot/readiness/revogação individual aprovado.
-- Workflow externo agora compila checkout da branch isolada, não ZIP antigo. Execução 42823754826 em compilação na última verificação.
+- Workflow externo compila checkout da branch isolada, não ZIP antigo. Execução 42823754826 concluída com sucesso; 9 JUnit aprovados; assinatura v2 verificada; APK 14.801.147 bytes.
+- SHA256 APK: 024dbee93ef4a89bfa218be365ad2387abaebef1f7746da1e7a096249d304cb3. Código-fonte compilado: 242a172c71f4f69142f318db4ac761cbefee91d1.
+- Certificado debug diferente da build anterior: desinstalar somente o APK de teste anterior para instalar esta versão; ajustes locais antigos serão perdidos.
 - Leia docs/ativacao.md; as informações abaixo registram a build histórica 0.3.0-test e NÃO descrevem a configuração atual.
 
 ## Histórico: 0.3.0-test

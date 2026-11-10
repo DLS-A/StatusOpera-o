@@ -4,7 +4,7 @@ Esta versão usa **ativação única por telefone**, não login OAuth. Este docu
 
 ## Uso
 
-1. Instale o APK entregue. Se houver conflito de assinatura com o APK de teste anterior, remova apenas a instalação de teste antiga e instale o novo APK; ajustes locais antigos serão perdidos.
+1. Desinstale somente o APK de teste anterior e instale o novo APK entregue. As assinaturas debug são diferentes; ajustes locais antigos serão perdidos. Não remova outro aplicativo produtivo.
 2. Abra o aplicativo com internet e digite o código fornecido privadamente pelo responsável.
 3. Depois da ativação, o app abre direto. Cada telefone recebe sua própria credencial cifrada no Android Keystore; o código compartilhado não fica salvo.
 4. Reinstalação ou limpeza dos dados exige o código novamente. Não use “Desativar telefone” apenas para fechar o aplicativo: essa ação revoga a credencial e apaga o cache local.
@@ -24,7 +24,7 @@ O código não pertence ao APK ou ao repositório. Qualquer pessoa que o conheç
 
 Em 10/11/2026, a consulta real GRM foi normalizada com 1493 registros e 93 equipamentos; as contagens variam com a operação. Snapshot remoto com dados frescos, origem disponível e persistência confirmada. Sem bearer: 401. Código errado: 403. Sessão e readiness autenticados: 200. Revogação individual: telefone revogado 401 enquanto outro permanece 200. Credenciais de teste foram removidas após a verificação.
 
-67 testes Python aprovados, incluindo integração PostgreSQL local descartável e limitação persistente das tentativas. Compilação e JUnit Android ocorrem somente no GitHub Actions; ver relatório de evidências entregue com o APK. Não foi executado teste físico/emulador neste sandbox.
+67 testes Python aprovados, incluindo integração PostgreSQL local descartável e limitação persistente das tentativas. GitHub Actions `42823754826` concluído com sucesso, 9 JUnit aprovados, assinatura v2 do APK verificada. SHA-256: `024dbee93ef4a89bfa218be365ad2387abaebef1f7746da1e7a096249d304cb3`. Não foi executado teste físico/emulador neste sandbox.
 
 ## Limites
 
