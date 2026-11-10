@@ -8,7 +8,7 @@ import threading
 from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
                        obter_manutencoes_abertas, obter_manutencoes_atuais,
                        obter_pausas_ergonomicas_abertas)
-from .report_contract import current_records, maintenance_reason, pause_reason
+from .report_contract import current_records, maintenance_reason, pause_reason, original_start
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ def public_record(item):
     return {"id": str(item["id"]), "equipmentTag": str(item.get("equipmentTag") or ""),
             "reasonName": str(item.get("reasonName") or ""), "startDate": item.get("startDate"),
             "startEpochMillis": int(start.timestamp() * 1000) if start else None,
+            "startConfirmed": item.get('_start_confirmed', False),
             "endDate": item.get("endDate"),
             "durationSeconds": calcular_duracao_segundos(start, item.get("_fim_dt")),
             **{name: str(item.get(name) or "") for name in
@@ -25,7 +26,7 @@ def public_record(item):
 
 
 def build_snapshot(records, settings=None):
-    active = current_records(records)
+    active = [original_start(records, r) for r in current_records(records)]
     current = {r["equipmentTag"]: r for r in active}
     tags = sorted({str(r["equipmentTag"]) for r in records if r.get("equipmentTag")})
     def state(tag):

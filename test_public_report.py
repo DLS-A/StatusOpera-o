@@ -55,6 +55,81 @@ class PublicReportTests(TestCase):
         opened=self.row('2','EQ','PAUSA ERGONOMICA',now-timedelta(minutes=16),None)
         self.assertEqual([opened],current_records([old,opened]))
 
+    def test_same_id_shift_slices_restore_real_november_four_opening(self):
+        opening=datetime(2026,11,4,9,17,27,tzinfo=timezone.utc)
+        shift=datetime(2026,11,10,6,tzinfo=timezone.utc)
+        now=shift+timedelta(hours=4)
+        before=self.row('previous','CB-312','LOCOMOCAO',opening-timedelta(minutes=20),opening)
+        first=self.row('52876935','CB-312','EXEC MANUT CORRETIVA',opening,shift)
+        last=self.row('52876935','CB-312','EXEC MANUT CORRETIVA',shift,now)
+        other=self.row('other','EQ','DISPONIVEL PARA OPERAR',shift,now)
+        data=build_snapshot([before,first,last,other])
+        result=data['maintenance'][0]
+        self.assertEqual(int(opening.timestamp()*1000),result['startEpochMillis'])
+        self.assertTrue(result['startConfirmed'])
+        self.assertEqual(int((now-opening).total_seconds()),result['durationSeconds'])
+        self.assertEqual(shift,last['_inicio_dt']) # Never mutate raw source.
+
+    def test_ag_maintenance_current_and_changed_ids_are_not_merged(self):
+        now=datetime.now(timezone.utc);start=now-timedelta(hours=2)
+        old=self.row('old','CB-344','AG MANUTENCAO',start-timedelta(days=2),start-timedelta(minutes=2))
+        operation=self.row('operation','CB-344','DISPONIVEL PARA OPERAR',start-timedelta(minutes=2),start)
+        current=self.row('new','CB-344','AG MANUTENÇÃO',start,now)
+        other=self.row('other','EQ','OPERANDO',start,now)
+        result=build_snapshot([old,operation,current,other])['maintenance'][0]
+        self.assertEqual('new',result['id'])
+        self.assertEqual(int(start.timestamp()*1000),result['startEpochMillis'])
+        self.assertTrue(result['startConfirmed'])
+
+    def test_same_id_does_not_bridge_missing_interval_or_other_equipment(self):
+        now=datetime.now(timezone.utc);start=now-timedelta(hours=1)
+        older=self.row('id','CB','EXEC MANUT CORRETIVA',start-timedelta(days=4),start-timedelta(hours=1))
+        elsewhere=self.row('id','OTHER','EXEC MANUT CORRETIVA',start-timedelta(days=4),start)
+        current=self.row('id','CB','EXEC MANUT CORRETIVA',start,now)
+        other=self.row('other','EQ','OPERANDO',start,now)
+        result=next(r for r in build_snapshot([older,elsewhere,current,other])['maintenance'] if r['equipmentTag']=='CB')
+        self.assertEqual(int(start.timestamp()*1000),result['startEpochMillis'])
+        self.assertFalse(result['startConfirmed'])
+
+    def test_unconfirmed_start_is_flagged_instead_of_fabricating_today(self):
+        now=datetime.now(timezone.utc);start=now-timedelta(days=3)
+        current=self.row('id','CB','EXEC MANUT PREVENTIVA',start,now)
+        other=self.row('other','EQ','OPERANDO',start,now)
+        result=build_snapshot([current,other])['maintenance'][0]
+        self.assertEqual(int(start.timestamp()*1000),result['startEpochMillis'])
+        self.assertFalse(result['startConfirmed'])
+
+    def test_history_bootstrap_is_cached_and_does_not_replace_current_cutoff(self):
+        from backend.app.grm_client import GrmClient
+        from backend.app.settings import Settings
+        now=datetime.now(timezone.utc);shift=now-timedelta(hours=3);opening=now-timedelta(days=6)
+        current=[self.row('m','CB-312','EXEC MANUT CORRETIVA',shift,now),self.row('o','EQ','OPERANDO',shift,now)]
+        history=[self.row('prior','CB-312','OPERANDO',opening-timedelta(minutes=1),opening),
+            self.row('m','CB-312','EXEC MANUT CORRETIVA',opening,shift),
+            self.row('m','CB-312','EXEC MANUT CORRETIVA',shift,now+timedelta(seconds=2)),
+            self.row('previous','EQ','DISPONIVEL PARA OPERAR',shift-timedelta(minutes=1),shift),current[1]]
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        with patch.object(client,'_fetch_window',side_effect=[current,history,current]) as fetch:
+            first=client.fetch();second=client.fetch()
+        self.assertEqual([1,7,1],[c.args[0] for c in fetch.call_args_list])
+        for records in (first,second):
+            result=build_snapshot(records)['maintenance'][0]
+            self.assertEqual(int(opening.timestamp()*1000),result['startEpochMillis'])
+            self.assertEqual(now.isoformat(),result['endDate'])
+            self.assertTrue(result['startConfirmed'])
+
+    def test_history_failure_preserves_valid_current_with_unconfirmed_date(self):
+        from backend.app.grm_client import GrmClient, GrmUnavailable
+        from backend.app.settings import Settings
+        now=datetime.now(timezone.utc)
+        current=[self.row('m','CB-312','EXEC MANUT CORRETIVA',now-timedelta(hours=2),now),
+                 self.row('o','EQ','OPERANDO',now-timedelta(hours=2),now)]
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        with patch.object(client,'_fetch_window',side_effect=[current,GrmUnavailable('No history')]):
+            result=build_snapshot(client.fetch())
+        self.assertEqual(1,len(result['maintenance']))
+        self.assertFalse(result['maintenance'][0]['startConfirmed'])
+
     def test_public_reads_no_code_no_bearer_and_no_operational_writes(self):
         with patch.dict('os.environ',{'AUTH_MODE':'public'}), TestClient(app,base_url='https://testserver') as client:
             service=Mock();store=Mock();app.state.service=service;app.state.store=store

@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from functions import normalizar_apontamento, chave_inicio_apontamento
+from .report_contract import current_records, maintenance_reason, record_key, original_start
 
 MAX_BYTES = 10 * 1024 * 1024
 TRANSIENT = {408, 429, 500, 502, 503, 504}
@@ -20,15 +21,62 @@ class GrmClient:
         self.settings = settings
         self.session = session or requests.Session()
         self.sleep = sleeper
+        self._history = []
+        self._history_attempt = 0.0
 
     def fetch(self):
+        records = self._fetch_window(1)
+        active = current_records(records)
+        keys = {record_key(r) for r in active}
+        known = {record_key(r) for r in self._history}
+        now = time.monotonic()
+        # Historical bootstrap is bounded and cached, never 7 days every minute.
+        # Failure to retrieve history must not erase valid current operation.
+        if keys - known and (not self._history_attempt or now - self._history_attempt >= 3600):
+            self._history_attempt = now
+            try:
+                # Retain source slices for still-active IDs across later windows.
+                # Otherwise a long maintenance would lose its opening next week.
+                remembered = [r for r in self._history if record_key(r) in keys]
+                earliest = {(r['equipmentTag'], r['_inicio_dt']) for r in remembered}
+                predecessors = [r for r in self._history if record_key(r) not in keys
+                    and (r['equipmentTag'], r.get('_fim_dt')) in earliest]
+                self._history = self._fetch_window(7) + remembered + predecessors
+                # Older slices come in separate bounded 7-day queries, rather
+                # than one unbounded download. Stop once openings are confirmed.
+                for end_days in (7, 14, 21):
+                    unresolved = [r for r in active if record_key(r) in keys - known
+                        and not original_start(self._history + records, r).get('_start_confirmed')]
+                    if not unresolved:
+                        break
+                    self._history.extend(self._fetch_window(end_days + 7, end_days))
+            except GrmUnavailable:
+                pass
+        self._history = list({(record_key(r), r['_inicio_dt'], r.get('_fim_dt')): r for r in self._history}.values())
+        starts = {record_key(r): r['_inicio_dt'] for r in active}
+        history = []
+        for part in self._history:
+            boundary = starts.get(record_key(part))
+            if boundary and part['_inicio_dt'] < boundary and part.get('_fim_dt'):
+                copy = dict(part)
+                copy['_fim_dt'] = min(part['_fim_dt'], boundary)
+                copy['endDate'] = int(copy['_fim_dt'].timestamp() * 1000)
+                history.append(copy)
+            # Predecessors confirm an actual opening rather than query boundary.
+            elif part['equipmentTag'] in {r['equipmentTag'] for r in active} and part.get('_fim_dt'):
+                if all(part['_fim_dt'] < r['_inicio_dt'] for r in active if r['equipmentTag'] == part['equipmentTag']):
+                    history.append(part)
+        return sorted(history + records, key=chave_inicio_apontamento)
+
+    def _fetch_window(self, days, end_days_ago=0):
         now = datetime.now(timezone.utc)
         local = ZoneInfo("America/Sao_Paulo")
-        # Preserve the existing, documented query window. Do not invent an API filter.
-        begin = datetime.combine(now.astimezone(local).date(), day_time.min, local) - timedelta(days=1)
+        # Same endpoint/filter contract; bounded history resolves shift splits.
+        begin = datetime.combine(now.astimezone(local).date(), day_time.min, local) - timedelta(days=days)
+        finish = now if not end_days_ago else datetime.combine(now.astimezone(local).date(), day_time.min, local) - timedelta(days=end_days_ago)
         def timestamp(value):
             return value.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-        params = {"token": self.settings.grm_token, "begin": timestamp(begin), "end": timestamp(now)}
+        params = {"token": self.settings.grm_token, "begin": timestamp(begin), "end": timestamp(finish)}
         for attempt in range(3):
             retry = False
             try:

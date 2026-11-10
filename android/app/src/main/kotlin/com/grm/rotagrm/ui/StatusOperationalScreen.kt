@@ -24,7 +24,10 @@ import com.grm.rotagrm.R
 import com.grm.rotagrm.domain.model.EquipmentStatus
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.OperationalRecord
+import com.grm.rotagrm.domain.model.equipmentTabRecords
 import com.grm.rotagrm.settings.DEFAULT_PAUSE_STATUS
+import com.grm.rotagrm.settings.MEAL_STATUS
+import com.grm.rotagrm.settings.configurableStatus
 import com.grm.rotagrm.settings.MonitoringSettings
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -50,7 +53,12 @@ fun OperationalScreen(
     notificationsAllowed: Boolean,
     onRefresh: () -> Unit,
     onRequestNotifications: () -> Unit,
-    onAcknowledge: (String) -> Unit,
+    monitoringStatus: String,
+    monitoringRunning: Boolean,
+    onStartMonitoring: () -> Unit,
+    onPauseMonitoring: () -> Unit,
+    onNotificationSettings: () -> Unit,
+    onTestSound: () -> Unit,
     onRefreshInterval: (Int) -> Unit,
     onStatusLimit: (String, Int) -> Unit,
     onStatusAlerts: (String, Boolean) -> Unit,
@@ -99,11 +107,11 @@ fun OperationalScreen(
             if (state.message.isNotBlank()) Text(state.message, Modifier.padding(horizontal = 18.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall)
             Box(Modifier.weight(1f)) {
                 when (tab) {
-                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, onRequestNotifications, onAcknowledge)
-                    OperationalTab.EQUIPMENT -> EquipmentContent(visible.snapshot?.equipment.orEmpty(), visible)
+                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, onRequestNotifications)
+                    OperationalTab.EQUIPMENT -> EquipmentContent(equipmentTabRecords(visible.snapshot?.equipment.orEmpty()), visible)
                     OperationalTab.PAUSES -> RecordContent("Pausas ergonômicas", visible.snapshot?.pauses.orEmpty(), visible, R.drawable.ic_pause)
                     OperationalTab.MAINTENANCE -> RecordContent("Manutenções abertas", visible.snapshot?.maintenance.orEmpty(), visible, R.drawable.ic_maintenance)
-                    OperationalTab.SETTINGS -> PreferencesContent(visible, notificationsAllowed, onRequestNotifications, onRefreshInterval, onStatusLimit, onStatusAlerts, onRepeatMinutes, onSound, onVisual, onRestoreSettings)
+                    OperationalTab.SETTINGS -> PreferencesContent(visible, notificationsAllowed, onRequestNotifications, onRefreshInterval, onStatusLimit, onStatusAlerts, onRepeatMinutes, onSound, onVisual, onRestoreSettings, monitoringStatus, monitoringRunning, onStartMonitoring, onPauseMonitoring, onNotificationSettings, onTestSound)
                 }
             }
         }
@@ -138,7 +146,7 @@ private fun MetricPanel(label: String, value: String, icon: Int, modifier: Modif
 }
 
 @Composable
-private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onPermission: () -> Unit, onAcknowledge: (String) -> Unit) {
+private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onPermission: () -> Unit) {
     val snapshot = state.snapshot
     val equipment = snapshot?.equipment.orEmpty()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -181,15 +189,14 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
         }
         item { SectionHeading("Alertas ativos") }
         if (state.alerts.isEmpty()) item {
-            Text(if (snapshot == null) "Aguardando conexão com o servidor." else "Nenhum limite excedido.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            Text(if (snapshot == null) "Aguardando conexão com o servidor." else "Nenhum alerta ativo.", color = MutedText, style = MaterialTheme.typography.bodySmall)
         }
         items(state.alerts, key = { "alert-${it.id}" }) { alert ->
             OutlinePanel(alert = true) {
                 Text(alert.equipmentTag, fontWeight = FontWeight.Bold, color = AlertRed)
                 Text(alert.status, style = MaterialTheme.typography.labelMedium)
-                Text(if (alert.maintenanceEvent) "Nova manutenção iniciada hoje." else "Excedido em ${clockDuration(alert.exceededSeconds)} · limite ${state.settings.limitsMinutesByStatus[alert.status] ?: alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
-                if (alert.id in state.acknowledgedAlertIds) Text("Reconhecido e silenciado", style = MaterialTheme.typography.labelSmall)
-                else TextButton(onClick = { onAcknowledge(alert.id) }) { Text("Reconhecer e silenciar") }
+                Text(if (alert.maintenanceEvent) "Manutenção em andamento." else "Excedido em ${clockDuration(alert.exceededSeconds)} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
+                Text("Permanece aqui até a atualização confirmar a mudança do apontamento.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }
     }
@@ -227,7 +234,7 @@ private fun EquipmentContent(equipment: List<EquipmentStatus>, state: Operationa
                     Text("Operador: ${record.operator.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
                     Text("Local: ${record.location.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
                     if (selectedTag == item.equipmentTag) {
-                        Text("Início: ${record.startEpochMillis?.let { localCollectionTime(Instant.ofEpochMilli(it).toString()) } ?: "Indisponível"}", style = MaterialTheme.typography.bodySmall)
+                        Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
                         Text("Limite: ${limit?.let { "$it min" } ?: "Não configurado"}", style = MaterialTheme.typography.bodySmall)
                         if (exceeded && limit != null) Text("Excedido em ${clockDuration(elapsed - limit * 60L)}", color = AlertRed)
                         Text("Tipo: ${record.equipmentType} · Categoria: ${record.kpiCategory}", style = MaterialTheme.typography.bodySmall)
@@ -256,9 +263,9 @@ private fun RecordContent(title: String, records: List<OperationalRecord>, state
                 }
                 Text(record.reasonName, color = if (exceeded) AlertRed else BrandBlue, style = MaterialTheme.typography.labelMedium)
                 Text(clockDuration(elapsed), color = BrandBlue, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text("Duração do apontamento", color = MutedText, style = MaterialTheme.typography.labelSmall)
+                Text(if (record.startConfirmed) "Duração do apontamento" else "Duração conhecida no relatório", color = MutedText, style = MaterialTheme.typography.labelSmall)
                 HorizontalDivider(Modifier.padding(vertical = 5.dp), color = Color(0xFFEDEDF8))
-                Text("Início: ${record.startEpochMillis?.let { localCollectionTime(Instant.ofEpochMilli(it).toString()) } ?: "Indisponível"}", style = MaterialTheme.typography.bodySmall)
+                Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
                 if (limit != null) Text("Limite: $limit min", style = MaterialTheme.typography.bodySmall)
                 Text("Operador: ${record.operator.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
                 Text("Local: ${record.location.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
@@ -278,23 +285,23 @@ private fun EmptyOperationalList(state: OperationalUiState, emptyMessage: String
 }
 
 @Composable
-private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPermission: () -> Unit, onRefresh: (Int) -> Unit, onLimit: (String, Int) -> Unit, onAlerts: (String, Boolean) -> Unit, onRepeat: (Int) -> Unit, onSound: (Boolean) -> Unit, onVisual: (Boolean) -> Unit, onRestore: () -> Unit) {
+private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPermission: () -> Unit, onRefresh: (Int) -> Unit, onLimit: (String, Int) -> Unit, onAlerts: (String, Boolean) -> Unit, onRepeat: (Int) -> Unit, onSound: (Boolean) -> Unit, onVisual: (Boolean) -> Unit, onRestore: () -> Unit, monitoringStatus: String, monitoringRunning: Boolean, onStart: () -> Unit, onPause: () -> Unit, onNotificationSettings: () -> Unit, onTestSound: () -> Unit) {
     val settings = state.settings
-    val statuses = (state.snapshot?.equipment.orEmpty().mapNotNull { it.current?.reasonName } + settings.limitsMinutesByStatus.keys).distinct().sorted()
+    val statuses = listOf(DEFAULT_PAUSE_STATUS, MEAL_STATUS)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading("Monitoramento") }
         item { OutlinePanel { ValueStepper("Atualização", "${settings.refreshIntervalSeconds} segundos", settings.refreshIntervalSeconds, 30, 3600, 30, onRefresh) } }
         item { SectionHeading("Limites e alertas") }
         items(statuses, key = { "setting-$it" }) { status ->
             OutlinePanel {
-                Text(status, color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                Text(if (status == MEAL_STATUS) "REFEIÇÃO" else "PAUSA ERGONÔMICA", color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
                 val limit = operationalLimit(status, settings)
                 if (limit == null) {
                     Text("Sem limite configurado", style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = { onLimit(status, 60) }) { Text("Configurar limite de 60 min") }
                 } else ValueStepper("Limite", "$limit min", limit, 1, 1440, 1) { onLimit(status, it) }
-                val checked = settings.alertsEnabledByStatus[status] ?: if (ergonomicStatus(status)) settings.alertsEnabledByStatus[DEFAULT_PAUSE_STATUS] ?: false else false
-                PreferenceSwitch(if (maintenanceStatus(status)) "Alertar novo apontamento" else "Alertar ao exceder", checked) { onAlerts(status, it) }
+                val checked = settings.alertsEnabledByStatus[status] ?: true
+                PreferenceSwitch("Alertar ao exceder", checked) { onAlerts(status, it) }
             }
         }
         item { SectionHeading("Notificações") }
@@ -304,14 +311,19 @@ private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPe
                 PreferenceSwitch("Som", settings.alertSoundEnabled, onSound)
                 PreferenceSwitch("Notificações visuais", settings.alertVisualEnabled, onVisual)
                 Text("O volume é controlado pelo Android e pelo canal de notificações.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                TextButton(onClick = onTestSound, enabled = allowed) { Text("Testar notificação sonora") }
+                TextButton(onClick = onNotificationSettings) { Text("Som e canal no Android") }
                 if (!allowed) TextButton(onClick = onPermission) { Text("Permitir notificações") }
             }
         }
         item { OutlinedButton(onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text("Restaurar padrões") } }
         item {
             OutlinePanel {
-                Text(if (BuildConfig.FCM_ENABLED) "Push habilitado nesta compilação" else "Push desabilitado nesta compilação", color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                Text("Alertas e repetição locais funcionam durante o uso em primeiro plano. Sem push com o app fechado.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                Text(monitoringStatus, color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
+                Text("Sem Firebase. Monitor contínuo com notificação fixa; no Android 15+ há limite de 6h em segundo plano. Apoio periódico: mínimo 15 min, sujeito a atrasos. Reabra o app para retomar o monitor.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                Text("Internet, servidor disponível, volume e canal com som são necessários. Não perturbe, economia de bateria e Forçar parada podem impedir alertas.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                if (monitoringRunning) TextButton(onClick = onPause) { Text("Pausar monitor em segundo plano") }
+                else TextButton(onClick = if (allowed) onStart else onPermission) { Text("Iniciar monitor em segundo plano") }
             }
         }
         item { Text("Versão ${BuildConfig.VERSION_NAME} · ${if (state.configured) "acesso livre" else "servidor pendente"}", color = MutedText, style = MaterialTheme.typography.labelSmall) }
@@ -346,9 +358,12 @@ private fun rememberOperationalClock(): Long {
 }
 
 private fun ergonomicStatus(status: String): Boolean = "PAUSA" in status.uppercase() || "ERGONOM" in status.uppercase()
-private fun maintenanceStatus(status: String): Boolean = status.uppercase().replace(Regex("\\s*-\\s*"), "-") in setOf("AG MANUTENCAO", "EXEC MANUT CORRETIVA", "EXEC MANUT PREVENTIVA", "EXEC MANUT PREVENTIVA-250 HRS")
-private fun operationalLimit(status: String, settings: MonitoringSettings): Int? = settings.limitsMinutesByStatus[status]
-    ?: if (ergonomicStatus(status)) settings.limitsMinutesByStatus[DEFAULT_PAUSE_STATUS] else null
+private fun recordStartLabel(record: OperationalRecord): String {
+    val available = record.startEpochMillis?.let { localCollectionTime(Instant.ofEpochMilli(it).toString()) } ?: "Indisponível"
+    return if (record.startConfirmed) "Início do apontamento: $available"
+        else "Abertura não confirmada no histórico. Primeiro trecho disponível: $available"
+}
+private fun operationalLimit(status: String, settings: MonitoringSettings): Int? = configurableStatus(status)?.let { settings.limitsMinutesByStatus[it] }
 private fun OperationalRecord.recordSeconds(now: Long): Long = startEpochMillis?.let { ((now - it) / 1000L).coerceAtLeast(0L) } ?: durationSeconds.coerceAtLeast(0L)
 private fun clockDuration(seconds: Long): String = "%02d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60)
 private fun localCollectionTime(value: String): String = runCatching {

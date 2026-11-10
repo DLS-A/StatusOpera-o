@@ -11,6 +11,7 @@ import com.grm.rotagrm.domain.model.AlertEvaluator
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.NewMaintenanceTracker
 import com.grm.rotagrm.domain.model.OperationalSnapshot
+import com.grm.rotagrm.domain.model.reconcileActiveAlerts
 import com.grm.rotagrm.notifications.OperationalNotifications
 import com.grm.rotagrm.notifications.PushDeliveryStore
 import com.grm.rotagrm.notifications.PushRegistrationWorker
@@ -39,7 +40,6 @@ data class OperationalUiState(
     val message: String = "",
     val snapshot: OperationalSnapshot? = null,
     val alerts: List<OperationalAlert> = emptyList(),
-    val acknowledgedAlertIds: Set<String> = emptySet(),
     val settings: MonitoringSettings = MonitoringSettings(),
 )
 
@@ -54,7 +54,6 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
     private var lastPushPreferences: MonitoringSettings? = null
     private val settingsRepository = MonitoringSettingsRepository(application)
     private val lastNotificationAt = mutableMapOf<String, Long>()
-    private val acknowledgedAlerts = mutableSetOf<String>()
     private val maintenanceTracker = NewMaintenanceTracker()
     private val _state = MutableStateFlow(
         OperationalUiState(configured = BuildConfig.API_BASE_URL.startsWith("https://")),
@@ -67,13 +66,8 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
             settingsRepository.settings.collect { settings ->
                 lastNotificationAt.clear()
                 lastNotificationAt.putAll(settings.lastAlertNotificationAt)
-                acknowledgedAlerts.clear()
-                acknowledgedAlerts.addAll(settings.acknowledgedAlertIds)
                 _state.value = _state.value.copy(
                     settings = settings,
-                    acknowledgedAlertIds = _state.value.alerts
-                        .filter { alertStorageId(it.id) in acknowledgedAlerts }
-                        .mapTo(mutableSetOf()) { it.id },
                 )
                 _state.value.snapshot?.let { evaluateAlerts(it, settings) }
                 val deliverySettings = settings.copy(acknowledgedAlertIds = emptySet(), lastAlertNotificationAt = emptyMap(),
@@ -155,14 +149,6 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun acknowledgeAlert(id: String) {
-        acknowledgedAlerts += alertStorageId(id)
-        pushDelivery.acknowledge(alertStorageId(id))
-        OperationalNotifications.cancel(getApplication(), id)
-        _state.value = _state.value.copy(acknowledgedAlertIds = _state.value.acknowledgedAlertIds + id)
-        viewModelScope.launch { settingsRepository.setAlertAcknowledged(id, acknowledged = true) }
-    }
-
     fun updateRefreshInterval(seconds: Int) = viewModelScope.launch {
         settingsRepository.setRefreshInterval(seconds)
     }
@@ -193,11 +179,10 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun evaluateAlerts(snapshot: OperationalSnapshot, settings: MonitoringSettings) {
         val updated = runCatching { Instant.parse(snapshot.updatedAt).toEpochMilli() }.getOrDefault(0L)
-        if (snapshot.stale || !_state.value.apiAvailable || System.currentTimeMillis() - updated > maxOf(120_000L, snapshot.refreshIntervalSeconds * 2000L)) return
+        if (snapshot.stale || !snapshot.sourceAvailable || !snapshot.persistenceAvailable || !_state.value.apiAvailable || System.currentTimeMillis() - updated > maxOf(120_000L, snapshot.refreshIntervalSeconds * 2000L)) return
         val now = System.currentTimeMillis()
         val thresholdAlerts = AlertEvaluator.activeAlerts(snapshot, settings, now)
-        val maintenanceAlerts = maintenanceTracker.activeEvents
-            .filter { settings.alertsEnabledByStatus[it.reasonName] ?: true }
+        val maintenanceAlerts = snapshot.maintenanceAlerts
             .map { record ->
                 OperationalAlert(
                     id = "maintenance:${record.id}",
@@ -209,18 +194,17 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
                     maintenanceEvent = true,
                 )
             }
-        val alerts = thresholdAlerts + maintenanceAlerts
+        val alerts = reconcileActiveAlerts(_state.value.alerts, thresholdAlerts + maintenanceAlerts, snapshot, now)
         val activeStorageIds = alerts.mapTo(mutableSetOf()) { alertStorageId(it.id) }
-        val staleIds = (lastNotificationAt.keys + acknowledgedAlerts).filter { it !in activeStorageIds }.toSet()
+        val staleIds = (lastNotificationAt.keys + _state.value.alerts.map { alertStorageId(it.id) }).filter { it !in activeStorageIds }.toSet()
         staleIds.forEach { storageId ->
             lastNotificationAt.remove(storageId)
-            acknowledgedAlerts.remove(storageId)
             OperationalNotifications.cancelByStorageId(getApplication(), storageId)
         }
         if (staleIds.isNotEmpty()) viewModelScope.launch { settingsRepository.clearAlertTrackingExcept(alerts.mapTo(mutableSetOf()) { it.id }) }
         alerts.forEach { alert ->
+            if (alert.maintenanceEvent && maintenanceTracker.activeEvents.none { "maintenance:${it.id}" == alert.id }) return@forEach
             val storageId = alertStorageId(alert.id)
-            if (storageId in acknowledgedAlerts) return@forEach
             val previous = lastNotificationAt[storageId] ?: pushDelivery.lastAt(storageId)
             val canRepeat = previous == null ||
                 (!alert.maintenanceEvent && now - previous >= settings.repeatAlertMinutes * 60_000L)
@@ -232,7 +216,6 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         }
         _state.value = _state.value.copy(
             alerts = alerts,
-            acknowledgedAlertIds = alerts.filter { alertStorageId(it.id) in acknowledgedAlerts }.mapTo(mutableSetOf()) { it.id },
         )
     }
 

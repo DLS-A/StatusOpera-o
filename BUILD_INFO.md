@@ -1,4 +1,10 @@
-# Status Operacional — build de teste 0.5.0-test
+# Status Operacional — build de teste 0.6.0-test
+
+## Correção0.6
+- versionCode6; serviço dataSync + apoio WorkManager sem Firebase. Motor compartilhado entre Activity/serviço/Worker, sem consultas paralelas e sem reconhecimento.
+- Ajustes pausa/refeição; manutenção excluída de Equipamentos; retorno após apontamento mudar. Datas reconstruídas das fatias do mesmo ID e confirmação explícita, sem usar hoje como abertura.
+- Exemplos reais: CB-312 aberto04/11/2026 06:17:27; CB-344 AG aberto09/11/2026 05:04:00 (São Paulo).
+- Testes JUnit e build serão validados externamente. Sem homologação física. docs/monitoramento-0.6.md prevalece; abaixo histórico0.5 e anteriores.
 
 ## Correção atual: acesso livre e relatório GRM
 - versionCode5, sem login/código; URL real preservada.

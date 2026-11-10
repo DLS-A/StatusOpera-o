@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.grm.rotagrm.notifications.OperationalNotifications
+import com.grm.rotagrm.notifications.OperationalMonitoringService
 import com.grm.rotagrm.notifications.PushRegistrationWorker
 import com.grm.rotagrm.settings.MonitoringSettingsRepository
 import com.grm.rotagrm.ui.OperationalScreen
@@ -27,13 +28,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: OperationalViewModel by viewModels()
+    private val viewModel: OperationalViewModel get() = (application as OperationalApplication).monitor
     private lateinit var settings: MonitoringSettingsRepository
     private var notificationsAllowed by mutableStateOf(false)
 
     private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationsAllowed = granted || Build.VERSION.SDK_INT < 33
         PushRegistrationWorker.enqueue(this)
+        if (notificationsAllowed) OperationalMonitoringService.start(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,12 +46,19 @@ class MainActivity : ComponentActivity() {
             StatusOperacionalTheme {
                 Surface(Modifier.fillMaxSize()) {
                     val state by viewModel.state.collectAsStateWithLifecycle()
+                    val monitoringStatus by OperationalMonitoringService.monitoringStatus.collectAsStateWithLifecycle()
+                    val monitoringRunning by OperationalMonitoringService.isRunning.collectAsStateWithLifecycle()
                     OperationalScreen(
                         state = state,
                         notificationsAllowed = notificationsAllowed,
                         onRefresh = { lifecycleScope.launch { viewModel.refresh() } },
                         onRequestNotifications = ::requestNotifications,
-                        onAcknowledge = viewModel::acknowledgeAlert,
+                        monitoringStatus = monitoringStatus,
+                        monitoringRunning = monitoringRunning,
+                        onStartMonitoring = { OperationalMonitoringService.start(this, explicit = true) },
+                        onPauseMonitoring = { OperationalMonitoringService.pause(this) },
+                        onNotificationSettings = { OperationalNotifications.openSoundSettings(this) },
+                        onTestSound = { OperationalNotifications.testSound(this) },
                         onRefreshInterval = { viewModel.updateRefreshInterval(it) },
                         onStatusLimit = { status, minutes -> viewModel.updateStatusLimit(status, minutes) },
                         onStatusAlerts = { status, enabled -> viewModel.updateStatusAlerts(status, enabled) },
@@ -64,7 +73,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (true) {
-                    viewModel.refresh()
+                    if (!OperationalMonitoringService.isRunning.value) viewModel.refresh()
                     delay(settings.settings.first().refreshIntervalSeconds * 1000L)
                 }
             }
@@ -75,6 +84,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         notificationsAllowed = OperationalNotifications.hasPermission(this)
         PushRegistrationWorker.enqueue(this)
+        if (notificationsAllowed) OperationalMonitoringService.start(this)
     }
 
     private fun requestNotifications() {

@@ -129,7 +129,8 @@ class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? =
             return OperationalRecord(id, getString("equipmentTag"), getString("reasonName"),
                 if (isNull("startEpochMillis")) null else getLong("startEpochMillis"),
                 getLong("durationSeconds").coerceAtLeast(0L), optString("operator"), optString("location"),
-                optString("equipmentType"), optString("kpiCategory"), durationFromReport = true)
+                optString("equipmentType"), optString("kpiCategory"), durationFromReport = true,
+                startConfirmed = optBoolean("startConfirmed", false))
         }
     }
 }

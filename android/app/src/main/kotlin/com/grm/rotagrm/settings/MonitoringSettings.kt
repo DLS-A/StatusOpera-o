@@ -19,8 +19,7 @@ data class MonitoringSettings(
     val limitsMinutesByStatus: Map<String, Int> = mapOf(DEFAULT_PAUSE_STATUS to DEFAULT_ERGONOMIC_PAUSE_LIMIT_MINUTES),
     val alertsEnabledByStatus: Map<String, Boolean> = mapOf(
         DEFAULT_PAUSE_STATUS to true,
-        CORRECTIVE_MAINTENANCE_STATUS to true,
-        PREVENTIVE_MAINTENANCE_STATUS to true,
+        MEAL_STATUS to true,
     ),
     val repeatAlertMinutes: Int = DEFAULT_REPEAT_ALERT_MINUTES,
     val alertSoundEnabled: Boolean = true,
@@ -33,27 +32,40 @@ const val DEFAULT_REFRESH_SECONDS = 60
 const val DEFAULT_ERGONOMIC_PAUSE_LIMIT_MINUTES = 15
 const val DEFAULT_REPEAT_ALERT_MINUTES = 5
 const val DEFAULT_PAUSE_STATUS = "PAUSA ERGONOMICA"
+const val MEAL_STATUS = "REFEICAO"
 const val CORRECTIVE_MAINTENANCE_STATUS = "EXEC MANUT CORRETIVA"
 const val PREVENTIVE_MAINTENANCE_STATUS = "EXEC MANUT PREVENTIVA"
 private const val LIMIT_PREFIX = "limit_minutes:"
 private const val ALERT_PREFIX = "alert_enabled:"
+
+fun configurableStatus(status: String): String? {
+    val normalized = java.text.Normalizer.normalize(status.uppercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}"), "").trim().replace(Regex("\\s+"), " ")
+    return normalized.takeIf { it == DEFAULT_PAUSE_STATUS || it == MEAL_STATUS }
+}
+
+internal fun <T> canonicalSettings(values: Map<String, T>): Map<String, T> {
+    val result = mutableMapOf<String, T>()
+    values.toSortedMap().forEach { (status, value) -> configurableStatus(status)?.let { result[it] = value } }
+    listOf(DEFAULT_PAUSE_STATUS, MEAL_STATUS).forEach { key -> values[key]?.let { result[key] = it } }
+    return result
+}
 
 class MonitoringSettingsRepository(private val context: Context) {
     val settings: Flow<MonitoringSettings> = context.monitoringDataStore.data.map { preferences ->
         MonitoringSettings(
             refreshIntervalSeconds = preferences[REFRESH_INTERVAL] ?: DEFAULT_REFRESH_SECONDS,
             limitsMinutesByStatus = mapOf(DEFAULT_PAUSE_STATUS to DEFAULT_ERGONOMIC_PAUSE_LIMIT_MINUTES) +
-                preferences.intValuesWithPrefix(LIMIT_PREFIX),
+                canonicalSettings(preferences.intValuesWithPrefix(LIMIT_PREFIX)),
             alertsEnabledByStatus = mapOf(
                 DEFAULT_PAUSE_STATUS to true,
-                CORRECTIVE_MAINTENANCE_STATUS to true,
-                PREVENTIVE_MAINTENANCE_STATUS to true,
+                MEAL_STATUS to true,
             ) +
-                preferences.booleanValuesWithPrefix(ALERT_PREFIX),
+                canonicalSettings(preferences.booleanValuesWithPrefix(ALERT_PREFIX)),
             repeatAlertMinutes = preferences[REPEAT_MINUTES] ?: DEFAULT_REPEAT_ALERT_MINUTES,
             alertSoundEnabled = preferences[SOUND_ENABLED] ?: true,
             alertVisualEnabled = preferences[VISUAL_ENABLED] ?: true,
-            acknowledgedAlertIds = preferences[ACKNOWLEDGED_ALERT_IDS] ?: emptySet(),
+            acknowledgedAlertIds = emptySet(), // Legacy recognition no longer suppresses alerts.
             lastAlertNotificationAt = preferences.longValuesWithPrefix(NOTIFIED_PREFIX),
         )
     }
@@ -64,17 +76,17 @@ class MonitoringSettingsRepository(private val context: Context) {
     }
 
     suspend fun setStatusLimit(status: String, minutes: Int?) {
-        require(status.isNotBlank())
+        val canonical = requireNotNull(configurableStatus(status))
         require(minutes == null || minutes in 1..1440)
-        val key = intPreferencesKey(LIMIT_PREFIX + status)
+        val key = intPreferencesKey(LIMIT_PREFIX + canonical)
         context.monitoringDataStore.edit { preferences ->
             if (minutes == null) preferences.remove(key) else preferences[key] = minutes
         }
     }
 
     suspend fun setAlertEnabled(status: String, enabled: Boolean) {
-        require(status.isNotBlank())
-        context.monitoringDataStore.edit { it[booleanPreferencesKey(ALERT_PREFIX + status)] = enabled }
+        val canonical = requireNotNull(configurableStatus(status))
+        context.monitoringDataStore.edit { it[booleanPreferencesKey(ALERT_PREFIX + canonical)] = enabled }
     }
 
     suspend fun setRepeatAlertMinutes(minutes: Int) {
@@ -139,8 +151,7 @@ class MonitoringSettingsRepository(private val context: Context) {
             preferences[intPreferencesKey(LIMIT_PREFIX + DEFAULT_PAUSE_STATUS)] =
                 DEFAULT_ERGONOMIC_PAUSE_LIMIT_MINUTES
             preferences[booleanPreferencesKey(ALERT_PREFIX + DEFAULT_PAUSE_STATUS)] = true
-            preferences[booleanPreferencesKey(ALERT_PREFIX + CORRECTIVE_MAINTENANCE_STATUS)] = true
-            preferences[booleanPreferencesKey(ALERT_PREFIX + PREVENTIVE_MAINTENANCE_STATUS)] = true
+            preferences[booleanPreferencesKey(ALERT_PREFIX + MEAL_STATUS)] = true
         }
     }
 

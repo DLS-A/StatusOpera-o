@@ -9,6 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+import android.provider.Settings
 import com.grm.rotagrm.MainActivity
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.settings.alertStorageId
@@ -27,6 +30,8 @@ object OperationalNotifications {
                 NotificationChannel(CHANNEL_SOUND, "Alertas operacionais", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "Avisos quando um apontamento ultrapassa o limite configurado."
                     enableVibration(true)
+                    setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                        AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
                 },
             )
             manager.createNotificationChannel(
@@ -39,6 +44,17 @@ object OperationalNotifications {
         }
     }
 
+    fun openSoundSettings(context: Context) {
+        createChannels(context)
+        context.startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .putExtra(Settings.EXTRA_CHANNEL_ID, CHANNEL_SOUND)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    fun testSound(context: Context): Boolean = postGeneric(context,
+        alertStorageId("sound-test:${System.nanoTime()}"), alertStorageId("sound-test"), true, 0L)
+
     fun post(context: Context, alert: OperationalAlert, soundEnabled: Boolean, repeatMillis: Long? = null): Boolean {
         val eventKey = if (alert.maintenanceEvent) "maintenance:${alert.id.removePrefix("maintenance:")}" else "limit:${alert.id}:${alert.limitSeconds}"
         return postGeneric(context, alertStorageId(eventKey), alertStorageId(alert.id), soundEnabled, repeatMillis)
@@ -47,6 +63,9 @@ object OperationalNotifications {
     fun postGeneric(context: Context, eventHash: String, alertHash: String, soundEnabled: Boolean, repeatMillis: Long? = null): Boolean {
         if (!hasPermission(context)) return false
         createChannels(context)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (!manager.areNotificationsEnabled()) return false
+        if (manager.getNotificationChannel(if (soundEnabled) CHANNEL_SOUND else CHANNEL_SILENT)?.importance == NotificationManager.IMPORTANCE_NONE) return false
         return PushDeliveryStore(context).post(eventHash, alertHash, repeatMillis) {
         val openApp = PendingIntent.getActivity(
             context,

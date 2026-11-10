@@ -1,8 +1,8 @@
 # ROTA GRM — Android existente
 
-## Atual: 0.5.0-test, versionCode 5 — sem autenticação
+## Atual: 0.6.0-test, versionCode 6 — sem autenticação
 
-Instale e abra. O código da versão anterior não é necessário. Consulte [acesso livre](../docs/acesso-livre.md). Backend público para leitura, credenciais GRM/banco somente no servidor. Apontamentos atuais, quatro manutenções e pausas/alertas corrigidos. A documentação restante é histórica.
+Instale e abra; permita notificações. Monitor dataSync em segundo plano com notificação fixa e apoio WorkManager15min, sem Firebase. Ajustes só pausa/refeição; alertas ativos sem reconhecimento. Manutenções não aparecem em Equipamentos e as datas usam abertura confirmada do mesmo ID. Consulte [monitoramento0.6](../docs/monitoramento-0.6.md) para limites Android e testes físicos pendentes. Backend público somente leitura; credenciais GRM/banco no servidor. Documentação restante é histórica.
 
 ## Versão atual: 0.4.0-test, versionCode 4
 

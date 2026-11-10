@@ -20,6 +20,33 @@ def maintenance_reason(value): return normalized_reason(value) in MAINTENANCE
 
 def pause_reason(value): return normalized_reason(value) == 'PAUSA ERGONOMICA'
 
+def record_key(row):
+    return (str(row['id']), row['equipmentTag'], normalized_reason(row['reasonName']))
+
+def original_start(records, row):
+    """Join only touching/overlapping shift slices of the exact same pointing.
+
+    No join by maintenance reason alone. A gap is a boundary, not downtime
+    invented as maintenance. Confirmation requires a preceding different ID.
+    """
+    result = dict(row)
+    begin = row.get('_inicio_dt')
+    if begin is None:
+        return result
+    slices = sorted((r for r in records if record_key(r) == record_key(row)
+                     and r.get('_inicio_dt') and r['_inicio_dt'] < begin),
+                    key=lambda r: r['_inicio_dt'], reverse=True)
+    for part in slices:
+        if not part.get('_fim_dt') or part['_fim_dt'] < begin:
+            break
+        begin = part['_inicio_dt']
+        result['_inicio_dt'] = begin
+        result['startDate'] = part['startDate']
+    result['_start_confirmed'] = any(r['equipmentTag'] == row['equipmentTag']
+        and str(r['id']) != str(row['id']) and r.get('_fim_dt') == begin
+        for r in records)
+    return result
+
 def current_records(records):
     explicit = [r for r in records if r.get('aberto')]
     latest_end = max((r['_fim_dt'] for r in records if r.get('_fim_dt')), default=None)

@@ -32,6 +32,7 @@ data class OperationalRecord(
     val equipmentType: String,
     val kpiCategory: String,
     val durationFromReport: Boolean = false,
+    val startConfirmed: Boolean = false,
 ) {
     fun elapsedSeconds(snapshot: OperationalSnapshot?, now: Long): Long {
         if (durationFromReport) {

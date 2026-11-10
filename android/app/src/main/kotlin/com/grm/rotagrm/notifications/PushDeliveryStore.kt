@@ -27,7 +27,8 @@ class PushDeliveryStore(context: Context) {
 
     fun post(eventHash: String, alertHash: String, repeatMillis: Long?, action: () -> Unit): Boolean = synchronized(lock) {
         prune()
-        if (alertHash in preferences.getStringSet("ack", emptySet()).orEmpty()) return@synchronized false
+        // Recognition from older APKs is deliberately ignored. Current pointing
+        // and repeat interval, not acknowledgment, govern notification lifetime.
         val delivered = preferences.getStringSet("events", emptySet()).orEmpty().toSet()
         val last = lastAt(alertHash)
         if (eventHash in delivered && (repeatMillis == null || (last != null && System.currentTimeMillis() - last < repeatMillis))) {

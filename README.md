@@ -1,8 +1,8 @@
 # Status Operacional — acesso livre
 
-## Versão atual 0.5.0-test
+## Versão atual 0.6.0-test
 
-Sem login nem código. Equipamentos com apontamento atual, quatro tipos de manutenção e pausas ergonômicas/alertas corrigidos conforme o relatório real da API. Consulte [acesso livre e correções](docs/acesso-livre.md), que prevalece sobre todos os documentos de autenticação anteriores.
+Sem login nem código. Monitor em segundo plano sem Firebase, apoio periódico, ajustes somente pausa/refeição, alertas sem reconhecimento, datas reconstruídas das fatias do mesmo apontamento. Equipamentos em manutenção ficam somente na aba Manutenções. Consulte [monitoramento0.6](docs/monitoramento-0.6.md), que prevalece sobre instruções anteriores, e [acesso livre](docs/acesso-livre.md).
 
 O backend é público para leitura; token GRM e senha do banco permanecem privados no servidor. Escritas não foram liberadas. Os detalhes abaixo descrevem a versão histórica 0.4.0, não o fluxo de acesso atual.
 
