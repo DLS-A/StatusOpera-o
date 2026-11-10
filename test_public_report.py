@@ -149,6 +149,71 @@ class PublicReportTests(TestCase):
                 self.assertLessEqual(len(client._history),5)
                 self.assertTrue(build_snapshot(result)['maintenance'][0]['startConfirmed'])
 
+    def test_numeric_grm_wall_dates_match_three_source_screens_without_changing_duration(self):
+        from backend.app.grm_client import normalize_grm_report_record
+        from zoneinfo import ZoneInfo
+        examples = [('CB-351', 52875828, '2026-11-04T08:59:51', 'EXEC MANUT CORRETIVA'),
+                    ('EH-309', 50946660, '2026-09-24T10:04:49', 'EXEC MANUT CORRETIVA'),
+                    ('TE-309', 53111208, '2026-11-10T09:18:22', 'EXEC MANUT PREVENTIVA - 250 HRS')]
+        for tag, id, local_start, reason in examples:
+            wall = datetime.fromisoformat(local_start).replace(tzinfo=timezone.utc)
+            raw = dict(id=id, equipmentTag=tag, reasonName=reason,
+                startDate=int(wall.timestamp()*1000), endDate=int((wall+timedelta(hours=5)).timestamp()*1000))
+            original = dict(raw)
+            record = normalize_grm_report_record(raw)
+            self.assertEqual(local_start, record['_inicio_dt'].astimezone(ZoneInfo('America/Sao_Paulo')).replace(tzinfo=None).isoformat())
+            self.assertEqual(18000, int((record['_fim_dt']-record['_inicio_dt']).total_seconds()))
+            self.assertEqual(original, raw)
+            self.assertEqual(int(record['_inicio_dt'].timestamp()*1000), record['startDate'])
+
+    def test_grm_source_adapter_does_not_shift_explicit_iso_or_generic_timestamp_conversion(self):
+        from backend.app.grm_client import normalize_grm_report_record
+        from functions import converter_timestamp
+        row = dict(id='1', equipmentTag='CB', reasonName='REFEICAO',
+            startDate='2026-11-10T09:18:22-03:00', endDate=None)
+        result = normalize_grm_report_record(row)
+        self.assertEqual('2026-11-10T12:18:22+00:00', result['_inicio_dt'].isoformat())
+        self.assertTrue(result['aberto'])
+        self.assertEqual('2026-11-10T09:18:22+00:00', converter_timestamp(1794302302000).isoformat())
+
+    def test_history_reaches_september_opening_beyond_old_28_day_limit(self):
+        from backend.app.grm_client import GrmClient
+        from backend.app.settings import Settings
+        now=datetime(2026,11,10,17,30,tzinfo=timezone.utc)
+        opening=datetime(2026,9,24,13,4,49,tzinfo=timezone.utc)
+        shift=now-timedelta(hours=3)
+        current=[self.row('50946660','EH-309','EXEC MANUT CORRETIVA',shift,now),
+                 self.row('o','EQ','OPERANDO',shift,now)]
+        def window(days, end_days_ago=0):
+            if days == 1: return current
+            end = shift if end_days_ago == 0 else now-timedelta(days=end_days_ago)
+            if end <= opening: return []
+            begin=max(opening,now-timedelta(days=days))
+            rows=[self.row('50946660','EH-309','EXEC MANUT CORRETIVA',begin,end)]
+            if begin == opening:
+                rows += [self.row('before','EH-309','TROCA DE TURNO/INSPECAO',opening-timedelta(minutes=10),opening)]
+            return rows
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        with patch.object(client,'_fetch_window',side_effect=window) as fetch:
+            first=client.fetch(); second=client.fetch()
+        result=build_snapshot(first)['maintenance'][0]
+        self.assertEqual(int(opening.timestamp()*1000),result['startEpochMillis'])
+        self.assertTrue(result['startConfirmed'])
+        self.assertEqual(result['startEpochMillis'],build_snapshot(second)['maintenance'][0]['startEpochMillis'])
+        self.assertTrue(any(c.args[0]>=49 for c in fetch.call_args_list))
+        self.assertEqual(2, sum(c.args[0]==1 for c in fetch.call_args_list))
+
+    def test_dense_history_is_split_and_one_day_oversize_still_fails_safely(self):
+        from backend.app.grm_client import GrmClient, GrmResponseTooLarge
+        from backend.app.settings import Settings
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        with patch.object(client,'_fetch_window',side_effect=[GrmResponseTooLarge('dense'),['recent'],['older']]) as fetch:
+            self.assertEqual(['recent','older'],client._history_window(7))
+        self.assertEqual([(7,0),(3,0),(7,3)],[c.args for c in fetch.call_args_list])
+        with patch.object(client,'_fetch_window',side_effect=GrmResponseTooLarge('dense')) as fetch:
+            with self.assertRaises(GrmResponseTooLarge):client._history_window(2,1)
+            self.assertEqual(1,fetch.call_count)
+
     def test_public_reads_no_code_no_bearer_and_no_operational_writes(self):
         with patch.dict('os.environ',{'AUTH_MODE':'public'}), TestClient(app,base_url='https://testserver') as client:
             service=Mock();store=Mock();app.state.service=service;app.state.store=store

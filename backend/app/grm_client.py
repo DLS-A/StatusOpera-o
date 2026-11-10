@@ -10,10 +10,34 @@ from .report_contract import current_records, maintenance_reason, record_key, or
 
 MAX_BYTES = 10 * 1024 * 1024
 TRANSIENT = {408, 429, 500, 502, 503, 504}
+MAX_HISTORY_DAYS = 91
 
 
 class GrmUnavailable(RuntimeError):
     pass
+
+
+class GrmResponseTooLarge(GrmUnavailable):
+    pass
+
+
+def normalize_grm_report_record(item):
+    """GRM numeric dates encode Sao Paulo wall time as UTC, not real instants.
+
+    Verified against CB-351, EH-309 and TE-309 source screens, including the
+    moving endDate. Convert once at the source adapter; generic timestamps and
+    explicit ISO offsets elsewhere remain unchanged. Never add 3h to duration.
+    """
+    corrected = dict(item)
+    for field in ('startDate', 'endDate'):
+        value = item.get(field)
+        if value is None or value == 0:
+            continue
+        if isinstance(value, (int, float)) or (isinstance(value, str) and value.lstrip('+-').isdigit()):
+            wall = datetime.fromtimestamp(int(value) / 1000, timezone.utc).replace(tzinfo=None)
+            instant = wall.replace(tzinfo=ZoneInfo('America/Sao_Paulo')).astimezone(timezone.utc)
+            corrected[field] = int(instant.timestamp() * 1000)
+    return normalizar_apontamento(corrected)
 
 
 class GrmClient:
@@ -44,15 +68,15 @@ class GrmClient:
                 earliest = {(r['equipmentTag'], r['_inicio_dt']) for r in remembered}
                 predecessors = [r for r in self._history if record_key(r) not in keys
                     and (r['equipmentTag'], r.get('_fim_dt')) in earliest]
-                self._history = self._fetch_window(7) + remembered + predecessors
+                self._history = self._relevant_history(self._history_window(7) + remembered + predecessors + records, keys)
                 # Older slices come in separate bounded 7-day queries, rather
                 # than one unbounded download. Stop once openings are confirmed.
-                for end_days in (7, 14, 21):
+                for end_days in range(7, MAX_HISTORY_DAYS, 7):
                     unresolved = [r for r in active if record_key(r) in missing
                         and not original_start(self._history + records, r).get('_start_confirmed')]
                     if not unresolved:
                         break
-                    self._history.extend(self._fetch_window(end_days + 7, end_days))
+                    self._history = self._relevant_history(self._history + self._history_window(end_days + 7, end_days) + records, keys)
                 self._failed_history_keys.difference_update(missing)
             except GrmUnavailable:
                 self._failed_history_keys.update(missing)
@@ -77,6 +101,24 @@ class GrmClient:
                 history.append(part)
         return sorted(history + records, key=chave_inicio_apontamento)
 
+    def _history_window(self, days, end_days_ago=0):
+        """Split dense historical windows instead of silently losing older starts."""
+        try:
+            return self._fetch_window(days, end_days_ago)
+        except GrmResponseTooLarge:
+            if days - end_days_ago <= 1:
+                raise
+            middle = (days + end_days_ago) // 2
+            return self._history_window(middle, end_days_ago) + self._history_window(days, middle)
+
+    @staticmethod
+    def _relevant_history(parts, keys):
+        relevant = [r for r in parts if record_key(r) in keys]
+        starts = {(r['equipmentTag'], r['_inicio_dt']) for r in relevant}
+        relevant += [r for r in parts if record_key(r) not in keys
+                     and (r['equipmentTag'], r.get('_fim_dt')) in starts]
+        return list({(record_key(r), r['_inicio_dt']): r for r in relevant}.values())
+
     def _fetch_window(self, days, end_days_ago=0):
         now = datetime.now(timezone.utc)
         local = ZoneInfo("America/Sao_Paulo")
@@ -100,7 +142,7 @@ class GrmClient:
                         for chunk in response.iter_content(8192):
                             content.extend(chunk)
                             if len(content) > MAX_BYTES:
-                                raise GrmUnavailable("GRM response exceeds the limit")
+                                raise GrmResponseTooLarge("GRM response exceeds the limit")
                         if not content.strip():
                             # An empty body is not a confirmed empty operation.
                             raise GrmUnavailable("Empty GRM response")
@@ -110,7 +152,10 @@ class GrmClient:
                             raise GrmUnavailable("Invalid GRM JSON") from None
                         if not isinstance(data, list) or any(not isinstance(i, dict) or i.get("id") is None for i in data):
                             raise GrmUnavailable("Invalid GRM record structure")
-                        records = [normalizar_apontamento(item) for item in data]
+                        try:
+                            records = [normalize_grm_report_record(item) for item in data]
+                        except (ValueError, TypeError, OSError, OverflowError):
+                            raise GrmUnavailable("Invalid GRM date fields") from None
                         if any(not str(r["id"]).strip() or not isinstance(r["equipmentTag"], str)
                                or not r["equipmentTag"].strip() or not isinstance(r["reasonName"], str)
                                or not r["reasonName"].strip() or r["_inicio_dt"] is None

@@ -1,5 +1,11 @@
 # Status Operacional — build de teste 0.6.1-test
 
+## Correção do servidor — horários e histórico
+- Comparação com três imagens do usuário confirmou datas numéricas GRM como relógio local codificado em UTC. Conversão corrigida apenas no adaptador, tanto início quanto fim; duração não recebe deslocamento artificial.
+- Histórico ampliado de28 para91dias com divisão de respostas densas maiores que10MB; EH-309 iniciado em setembro agora pode ser confirmado.
+- Consulta real do adaptador corrigido confirmou CB-351 em04/11 08:59:51, EH-309 em24/09 10:04:49 e TE-309 em10/11 09:18:22. 83 testes Python/PostgreSQL passaram. Publicação do backend e verificação remota ainda pendentes neste registro.
+- Android não foi modificado: a versão0.6.1-test usa startEpochMillis e recebe a correção ao atualizar o snapshot, sem reinstalação.
+
 ## Correção 0.6.1
 - versionCode 7; Início mantém somente alertas de REFEIÇÃO e AG MANUTENÇÃO, com a mesma contagem filtrada.
 - Pausa e execução de manutenção ocultadas apenas no Início; monitor, som, configurações e aba Manutenções preservados.
