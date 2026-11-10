@@ -112,8 +112,14 @@ def healthz():
     return {"status": "ok"}
 
 
+def snapshot_reader(request: Request, credentials=Depends(bearer)):
+    if os.getenv('AUTH_MODE') == 'public':
+        return None
+    return authenticated_user(request, credentials)
+
+
 @app.get("/v1/readiness")
-def readiness(request: Request, claims=Depends(authenticated_user)):
+def readiness(request: Request, claims=Depends(snapshot_reader)):
     service = getattr(request.app.state, "service", None)
     snapshot = service.read() if service else None
     if not snapshot or snapshot["stale"]:
@@ -122,7 +128,7 @@ def readiness(request: Request, claims=Depends(authenticated_user)):
 
 
 @app.get("/v1/snapshot")
-def snapshot(request: Request, claims=Depends(authenticated_user)):
+def snapshot(request: Request, claims=Depends(snapshot_reader)):
     service = getattr(request.app.state, "service", None)
     result = service.read() if service else None
     if result is None:
@@ -207,7 +213,7 @@ def remove_device(device_id: UUID, claims=Depends(authenticated_user), store=Dep
 
 @app.get("/oauth/consent", response_class=HTMLResponse)
 def oauth_consent():
-    if activation_enabled():
+    if activation_enabled() or os.getenv('AUTH_MODE') == 'public':
         raise HTTPException(404, "Não disponível nesta versão.")
     try:
         supabase = https_url(os.getenv("SUPABASE_URL", ""))
@@ -223,6 +229,6 @@ def oauth_consent():
 
 @app.get("/oauth/consent.js")
 def oauth_script():
-    if activation_enabled():
+    if activation_enabled() or os.getenv('AUTH_MODE') == 'public':
         raise HTTPException(404, "Não disponível nesta versão.")
     return Response(Path(__file__).with_name("oauth_consent.js").read_text(encoding="utf-8"), media_type="text/javascript")

@@ -47,9 +47,7 @@ class MainActivity : ComponentActivity() {
                     OperationalScreen(
                         state = state,
                         notificationsAllowed = notificationsAllowed,
-                        onActivate = { code -> lifecycleScope.launch { viewModel.activate(code) } },
                         onRefresh = { lifecycleScope.launch { viewModel.refresh() } },
-                        onSignOut = viewModel::signOut,
                         onRequestNotifications = ::requestNotifications,
                         onAcknowledge = viewModel::acknowledgeAlert,
                         onRefreshInterval = { viewModel.updateRefreshInterval(it) },

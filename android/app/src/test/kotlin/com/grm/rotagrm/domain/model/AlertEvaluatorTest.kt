@@ -95,6 +95,33 @@ class AlertEvaluatorTest {
         assertEquals("limit:p1:900", "limit:${alert.id}:${alert.limitSeconds}")
     }
 
+    @Test
+    fun reportDurationAvoidsTimezoneInflationAndTriggersOnlyAfterLimit() {
+        val pause = record("p-report", start - 3 * 3_600_000L, duration = 900L)
+            .copy(durationFromReport = true, reasonName = "PAUSA ERGONÔMICA")
+        val data = snapshot(pause).copy(updatedAt = java.time.Instant.ofEpochMilli(start).toString())
+        assertTrue(AlertEvaluator.activeAlerts(data, settings(), start).isEmpty())
+        val alert = AlertEvaluator.activeAlerts(data, settings(), start + 1_000L).single()
+        assertEquals(1L, alert.exceededSeconds)
+    }
+
+    @Test
+    fun pauseTabFeedsAlertsEvenWhenEquipmentListDoesNotContainIt() {
+        val pause = record("pause-tab", start, duration = 960L).copy(durationFromReport = true)
+        val data = OperationalSnapshot(updatedAt = java.time.Instant.ofEpochMilli(start).toString(),
+            equipment = emptyList(), pauses = listOf(pause), maintenance = emptyList())
+        assertEquals("pause-tab", AlertEvaluator.activeAlerts(data, settings(), start).single().id)
+        assertTrue(AlertEvaluator.activeAlerts(data.copy(pauses = emptyList()), settings(), start).isEmpty())
+    }
+
+    @Test
+    fun staleReportedDurationDoesNotContinueGrowing() {
+        val pause = record("pause-offline", start, duration = 960L).copy(durationFromReport = true)
+        val data = snapshot(pause).copy(updatedAt = java.time.Instant.ofEpochMilli(start).toString(), stale = true)
+        assertEquals(960L, pause.elapsedSeconds(data, start + 5 * 60_000L))
+        assertTrue(AlertEvaluator.activeAlerts(data, settings(), start + 5 * 60_000L).isEmpty())
+    }
+
     private fun settings() = MonitoringSettings(
         limitsMinutesByStatus = mapOf(DEFAULT_PAUSE_STATUS to 15),
         alertsEnabledByStatus = mapOf(DEFAULT_PAUSE_STATUS to true),

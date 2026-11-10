@@ -28,9 +28,9 @@ import kotlin.coroutines.resumeWithException
 class SessionAccessException(val denied: Boolean = false) : IOException("Sessão expirada ou sem autorização.")
 class TemporaryServiceException : IOException("Serviço temporariamente indisponível.")
 
-class HttpOperationalRepository(private val auth: OidcAuthManager) : OperationalRepository {
+class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? = null) : OperationalRepository {
     private val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS).callTimeout(75, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
 
     override suspend fun fetchSnapshot(): OperationalSnapshot {
@@ -73,8 +73,7 @@ class HttpOperationalRepository(private val auth: OidcAuthManager) : Operational
         val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
         val uri = Uri.parse(base)
         require(uri.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null && uri.query == null && uri.fragment == null)
-        val token = auth.validAccessToken()
-        val request = Request.Builder().url(base + path).header("Authorization", "Bearer $token")
+        val request = Request.Builder().url(base + path)
             .header("Accept", "application/json").method(method, body?.toRequestBody("application/json".toMediaType())).build()
         return suspendCancellableCoroutine { continuation ->
             val call = client.newCall(request)
@@ -130,7 +129,7 @@ class HttpOperationalRepository(private val auth: OidcAuthManager) : Operational
             return OperationalRecord(id, getString("equipmentTag"), getString("reasonName"),
                 if (isNull("startEpochMillis")) null else getLong("startEpochMillis"),
                 getLong("durationSeconds").coerceAtLeast(0L), optString("operator"), optString("location"),
-                optString("equipmentType"), optString("kpiCategory"))
+                optString("equipmentType"), optString("kpiCategory"), durationFromReport = true)
         }
     }
 }

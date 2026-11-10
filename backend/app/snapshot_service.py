@@ -8,6 +8,7 @@ import threading
 from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
                        obter_manutencoes_abertas, obter_manutencoes_atuais,
                        obter_pausas_ergonomicas_abertas)
+from .report_contract import current_records, maintenance_reason, pause_reason
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ def public_record(item):
 
 
 def build_snapshot(records, settings=None):
-    current = {r["equipmentTag"]: r for r in obter_apontamentos_abertos(records)}
+    active = current_records(records)
+    current = {r["equipmentTag"]: r for r in active}
     tags = sorted({str(r["equipmentTag"]) for r in records if r.get("equipmentTag")})
     def state(tag):
         category = current.get(tag, {}).get("kpiCategory")
@@ -35,9 +37,9 @@ def build_snapshot(records, settings=None):
         return "unknown"
     return {"updatedAt": datetime.now(timezone.utc).isoformat(),
             "equipment": [{"equipmentTag": tag, "operationalState": state(tag), "current": public_record(current[tag]) if tag in current else None} for tag in tags],
-            "pauses": [public_record(r) for r in obter_pausas_ergonomicas_abertas(records)],
-            "maintenance": [public_record(r) for r in obter_manutencoes_abertas(records)],
-            "maintenanceAlerts": [public_record(r) for r in obter_manutencoes_atuais(records)],
+            "pauses": [public_record(r) for r in active if pause_reason(r['reasonName'])],
+            "maintenance": [public_record(r) for r in active if maintenance_reason(r['reasonName'])],
+            "maintenanceAlerts": [public_record(r) for r in active if maintenance_reason(r['reasonName'])],
             "records": [public_record(r) for r in records]}
 
 

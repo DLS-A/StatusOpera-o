@@ -16,7 +16,7 @@ data class OperationalAlert(
 object AlertEvaluator {
     fun activeAlerts(snapshot: OperationalSnapshot, settings: MonitoringSettings, nowEpochMillis: Long): List<OperationalAlert> {
         if (snapshot.stale || !snapshot.sourceAvailable || !snapshot.persistenceAvailable) return emptyList()
-        val records = snapshot.equipment.mapNotNull { it.current }
+        val records = (snapshot.equipment.mapNotNull { it.current } + snapshot.pauses)
             .filter { it.id.isNotBlank() }
             .distinctBy { it.id }
         return records.mapNotNull { record ->
@@ -31,9 +31,7 @@ object AlertEvaluator {
             val limitMinutes = settings.limitsMinutesByStatus[matchedStatus] ?: return@mapNotNull null
             if (!alertsEnabled || limitMinutes <= 0) return@mapNotNull null
 
-            val elapsed = record.startEpochMillis?.let { start ->
-                ((nowEpochMillis - start) / 1000L).coerceAtLeast(0L)
-            } ?: record.durationSeconds.coerceAtLeast(0L)
+            val elapsed = record.elapsedSeconds(snapshot, nowEpochMillis)
             val limitSeconds = limitMinutes * 60L
             if (elapsed <= limitSeconds) return@mapNotNull null
             OperationalAlert(
@@ -49,7 +47,7 @@ object AlertEvaluator {
 
     private fun isErgonomicPause(status: String): Boolean {
         val upper = status.uppercase()
-        return "PAUSA" in upper || "ERGONOM" in upper
+        return "PAUSA" in upper && "ERGONOM" in java.text.Normalizer.normalize(upper, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
     }
 }
 

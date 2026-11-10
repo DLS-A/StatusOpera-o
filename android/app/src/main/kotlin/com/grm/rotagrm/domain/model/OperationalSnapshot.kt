@@ -31,4 +31,15 @@ data class OperationalRecord(
     val location: String,
     val equipmentType: String,
     val kpiCategory: String,
-)
+    val durationFromReport: Boolean = false,
+) {
+    fun elapsedSeconds(snapshot: OperationalSnapshot?, now: Long): Long {
+        if (durationFromReport) {
+            val updated = snapshot?.updatedAt?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() }
+            val extra = if (snapshot == null || snapshot.stale || !snapshot.sourceAvailable || updated == null) 0L
+                else ((now - updated) / 1000L).coerceAtLeast(0L)
+            return durationSeconds.coerceAtLeast(0L) + extra
+        }
+        return startEpochMillis?.let { ((now - it) / 1000L).coerceAtLeast(0L) } ?: durationSeconds.coerceAtLeast(0L)
+    }
+}

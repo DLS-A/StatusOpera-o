@@ -48,9 +48,7 @@ private enum class OperationalTab(val title: String, val shortTitle: String, val
 fun OperationalScreen(
     state: OperationalUiState,
     notificationsAllowed: Boolean,
-    onActivate: (String) -> Unit,
     onRefresh: () -> Unit,
-    onSignOut: () -> Unit,
     onRequestNotifications: () -> Unit,
     onAcknowledge: (String) -> Unit,
     onRefreshInterval: (Int) -> Unit,
@@ -62,19 +60,7 @@ fun OperationalScreen(
     onRestoreSettings: () -> Unit,
 ) {
     var tab by remember { mutableStateOf(OperationalTab.HOME) }
-    var activationCode by remember { mutableStateOf("") }
-    var confirmDeactivation by remember { mutableStateOf(false) }
-    if (confirmDeactivation) AlertDialog(
-        onDismissRequest = { confirmDeactivation = false },
-        title = { Text("Desativar este telefone?") },
-        text = { Text("Os dados locais serão apagados. Você precisará do código do responsável para ativar novamente.") },
-        confirmButton = { TextButton(onClick = { confirmDeactivation = false; onSignOut() }) { Text("Desativar") } },
-        dismissButton = { TextButton(onClick = { confirmDeactivation = false }) { Text("Cancelar") } },
-    )
-    // A estrutura pode ser inspecionada sem ativação; dados nunca são expostos.
-    val visible = if (state.signedIn) state else state.copy(
-        snapshot = null, alerts = emptyList(), acknowledgedAlertIds = emptySet(), apiAvailable = false,
-    )
+    val visible = state
     Scaffold(
         containerColor = Color.White,
         bottomBar = {
@@ -105,45 +91,15 @@ fun OperationalScreen(
                 Icon(painterResource(R.drawable.ic_equipment), null, Modifier.size(30.dp), tint = BrandBlue)
                 Column(Modifier.weight(1f)) {
                     Text("Status Operacional", color = BrandBlue, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                    Text("Consulta protegida · somente leitura", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                    Text("Apontamentos da obra · acesso livre", style = MaterialTheme.typography.labelSmall, color = MutedText)
                 }
                 if (state.loading) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
             }
-            if (!state.signedIn) {
-                Surface(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    color = Color(0xFFF4F4FB), shape = RoundedCornerShape(10.dp),
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(if (state.activationSaved) "Telefone ativado" else if (state.configured) "Ativar este telefone" else "Configuração pendente", fontWeight = FontWeight.SemiBold, color = BrandBlue)
-                        Text(
-                            if (state.activationSaved) "A ativação está salva. Conecte-se à internet para consultar os dados."
-                            else if (state.configured) "Digite o código fornecido pelo responsável uma única vez. Depois, o aplicativo abre direto."
-                            else "Servidor não configurado. Os dados reais não estão disponíveis.",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        if (state.message.isNotBlank()) Text(state.message, style = MaterialTheme.typography.bodySmall)
-                        if (state.activationSaved) {
-                            Button(onClick = onRefresh, enabled = !state.loading) { Text("Tentar conexão") }
-                        } else if (state.configured) {
-                            OutlinedTextField(
-                                value = activationCode, onValueChange = { activationCode = it.take(80) },
-                                label = { Text("Código de ativação") }, singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                enabled = !state.loading, modifier = Modifier.fillMaxWidth(),
-                            )
-                            Button(onClick = { val code = activationCode; activationCode = ""; onActivate(code) },
-                                enabled = activationCode.trim().length >= 12 && !state.loading) { Text("Ativar telefone") }
-                        }
-                    }
-                }
-            } else {
-                CurrentSnapshotBanner(visible)
-                if (state.message.isNotBlank()) Text(state.message, Modifier.padding(horizontal = 18.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall)
-            }
+            CurrentSnapshotBanner(visible)
+            if (state.message.isNotBlank()) Text(state.message, Modifier.padding(horizontal = 18.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall)
             Box(Modifier.weight(1f)) {
                 when (tab) {
-                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, { confirmDeactivation = true }, onRequestNotifications, onAcknowledge)
+                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, onRequestNotifications, onAcknowledge)
                     OperationalTab.EQUIPMENT -> EquipmentContent(visible.snapshot?.equipment.orEmpty(), visible)
                     OperationalTab.PAUSES -> RecordContent("Pausas ergonômicas", visible.snapshot?.pauses.orEmpty(), visible, R.drawable.ic_pause)
                     OperationalTab.MAINTENANCE -> RecordContent("Manutenções abertas", visible.snapshot?.maintenance.orEmpty(), visible, R.drawable.ic_maintenance)
@@ -182,7 +138,7 @@ private fun MetricPanel(label: String, value: String, icon: Int, modifier: Modif
 }
 
 @Composable
-private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onSignOut: () -> Unit, onPermission: () -> Unit, onAcknowledge: (String) -> Unit) {
+private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onPermission: () -> Unit, onAcknowledge: (String) -> Unit) {
     val snapshot = state.snapshot
     val equipment = snapshot?.equipment.orEmpty()
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -214,7 +170,6 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onRefresh, enabled = state.signedIn && !state.loading, modifier = Modifier.weight(1f)) { Text("Atualizar") }
-                if (state.signedIn) OutlinedButton(onClick = onSignOut, modifier = Modifier.weight(1f)) { Text("Desativar telefone") }
             }
         }
         if (state.signedIn && !notificationsAllowed) item {
@@ -226,7 +181,7 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
         }
         item { SectionHeading("Alertas ativos") }
         if (state.alerts.isEmpty()) item {
-            Text(if (snapshot == null) "Aguardando ativação e conexão com o servidor." else "Nenhum limite excedido.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            Text(if (snapshot == null) "Aguardando conexão com o servidor." else "Nenhum limite excedido.", color = MutedText, style = MaterialTheme.typography.bodySmall)
         }
         items(state.alerts, key = { "alert-${it.id}" }) { alert ->
             OutlinePanel(alert = true) {
@@ -256,7 +211,7 @@ private fun EquipmentContent(equipment: List<EquipmentStatus>, state: Operationa
         items(filtered, key = { it.equipmentTag }) { item ->
             val record = item.current
             val limit = record?.let { operationalLimit(it.reasonName, state.settings) }
-            val elapsed = record?.recordSeconds(confirmedNow(state, now)) ?: 0L
+            val elapsed = record?.elapsedSeconds(state.snapshot, confirmedNow(state, now)) ?: 0L
             val exceeded = limit != null && elapsed > limit * 60L
             val color = if (exceeded) AlertRed else if (limit != null && elapsed >= limit * 48L) WarningAmber else BrandBlue
             OutlinePanel(Modifier.clickable { selectedTag = if (selectedTag == item.equipmentTag) null else item.equipmentTag }, exceeded) {
@@ -290,7 +245,7 @@ private fun RecordContent(title: String, records: List<OperationalRecord>, state
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading(title, if (state.snapshot != null) "${records.size} registros" else "") }
         items(records, key = { it.id }) { record ->
-            val elapsed = record.recordSeconds(confirmedNow(state, now))
+            val elapsed = record.elapsedSeconds(state.snapshot, confirmedNow(state, now))
             val limit = operationalLimit(record.reasonName, state.settings)
             val exceeded = limit != null && elapsed > limit * 60L
             OutlinePanel(alert = exceeded) {
@@ -318,7 +273,7 @@ private fun RecordContent(title: String, records: List<OperationalRecord>, state
 private fun EmptyOperationalList(state: OperationalUiState, emptyMessage: String) {
     OutlinePanel {
         Text(if (state.snapshot == null) "Aguardando dados" else emptyMessage, color = MutedText, fontWeight = FontWeight.SemiBold)
-        if (state.snapshot == null) Text("Os dados serão consultados após ativar este telefone e conectar ao servidor.", style = MaterialTheme.typography.bodySmall, color = MutedText)
+        if (state.snapshot == null) Text("Conecte à internet e toque em Atualizar para consultar os apontamentos.", style = MaterialTheme.typography.bodySmall, color = MutedText)
     }
 }
 
@@ -391,7 +346,7 @@ private fun rememberOperationalClock(): Long {
 }
 
 private fun ergonomicStatus(status: String): Boolean = "PAUSA" in status.uppercase() || "ERGONOM" in status.uppercase()
-private fun maintenanceStatus(status: String): Boolean = status.uppercase() in setOf("EXEC MANUT CORRETIVA", "EXEC MANUT PREVENTIVA")
+private fun maintenanceStatus(status: String): Boolean = status.uppercase().replace(Regex("\\s*-\\s*"), "-") in setOf("AG MANUTENCAO", "EXEC MANUT CORRETIVA", "EXEC MANUT PREVENTIVA", "EXEC MANUT PREVENTIVA-250 HRS")
 private fun operationalLimit(status: String, settings: MonitoringSettings): Int? = settings.limitsMinutesByStatus[status]
     ?: if (ergonomicStatus(status)) settings.limitsMinutesByStatus[DEFAULT_PAUSE_STATUS] else null
 private fun OperationalRecord.recordSeconds(now: Long): Long = startEpochMillis?.let { ((now - it) / 1000L).coerceAtLeast(0L) } ?: durationSeconds.coerceAtLeast(0L)

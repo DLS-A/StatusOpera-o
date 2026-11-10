@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 from backend.app.auth import require_user
-from backend.app.main import app, authenticated_user, get_store
+from backend.app.main import app, authenticated_user, get_store, snapshot_reader
 from backend.app.snapshot_service import SnapshotService, build_snapshot
 from backend.app.settings import Settings
 from functions import normalizar_apontamento
@@ -36,6 +36,7 @@ class BackendSnapshotTests(TestCase):
 
     def authorize(self):
         app.dependency_overrides[authenticated_user] = lambda: {"sub": USER, "session_id": SESSION, "email": "allowed@example.com"}
+        app.dependency_overrides[snapshot_reader] = app.dependency_overrides[authenticated_user]
 
     def test_missing_bearer_is_rejected(self):
         self.assertEqual(401, self.client.get("/v1/snapshot").status_code)
