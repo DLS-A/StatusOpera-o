@@ -42,13 +42,9 @@ android {
         targetSdk = 36
         versionCode = 4
         versionName = "0.4.0-test"
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.grm.rotagrm"
         manifestPlaceholders["fcmEnabled"] = fcmEnabled.toString()
         buildConfigField("boolean", "FCM_ENABLED", fcmEnabled.toString())
         buildConfigField("String", "API_BASE_URL", "\"${gradlePropertyOrEmpty("rotaApiBaseUrl")}\"")
-        buildConfigField("String", "OIDC_ISSUER", "\"${gradlePropertyOrEmpty("rotaOidcIssuer")}\"")
-        buildConfigField("String", "OIDC_CLIENT_ID", "\"${gradlePropertyOrEmpty("rotaOidcClientId")}\"")
-        buildConfigField("String", "OIDC_AUDIENCE", "\"${gradlePropertyOrEmpty("rotaOidcAudience")}\"")
     }
 
     buildFeatures {
@@ -89,7 +85,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.datastore:datastore-preferences:1.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("net.openid:appauth:0.11.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
     implementation("com.google.firebase:firebase-messaging")

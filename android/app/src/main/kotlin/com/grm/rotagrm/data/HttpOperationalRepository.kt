@@ -10,7 +10,6 @@ import com.grm.rotagrm.domain.repository.OperationalRepository
 import com.grm.rotagrm.settings.MonitoringSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
-import net.openid.appauth.AuthorizationException
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
@@ -74,11 +73,7 @@ class HttpOperationalRepository(private val auth: OidcAuthManager) : Operational
         val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
         val uri = Uri.parse(base)
         require(uri.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null && uri.query == null && uri.fragment == null)
-        val token = try { auth.validAccessToken()
-        } catch (error: AuthorizationException) {
-            if (error.error == "invalid_grant" || error.error == "invalid_token") throw SessionAccessException()
-            throw TemporaryServiceException()
-        }
+        val token = auth.validAccessToken()
         val request = Request.Builder().url(base + path).header("Authorization", "Bearer $token")
             .header("Accept", "application/json").method(method, body?.toRequestBody("application/json".toMediaType())).build()
         return suspendCancellableCoroutine { continuation ->
