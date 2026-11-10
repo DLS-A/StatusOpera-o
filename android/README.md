@@ -1,6 +1,8 @@
 # ROTA GRM — Android existente
 
-## Atual: 0.6.0-test, versionCode 6 — sem autenticação
+## Atual: 0.6.1-test, versionCode 7 — sem autenticação
+
+Alertas de Início: somente REFEIÇÃO e AG MANUTENÇÃO; contador usa a mesma lista. Pausa fica oculta apenas no Início. Manutenções e regras sonoras preservadas.
 
 Instale e abra; permita notificações. Monitor dataSync em segundo plano com notificação fixa e apoio WorkManager15min, sem Firebase. Ajustes só pausa/refeição; alertas ativos sem reconhecimento. Manutenções não aparecem em Equipamentos e as datas usam abertura confirmada do mesmo ID. Consulte [monitoramento0.6](../docs/monitoramento-0.6.md) para limites Android e testes físicos pendentes. Backend público somente leitura; credenciais GRM/banco no servidor. Documentação restante é histórica.
 

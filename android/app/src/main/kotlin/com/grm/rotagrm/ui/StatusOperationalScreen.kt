@@ -25,6 +25,8 @@ import com.grm.rotagrm.domain.model.EquipmentStatus
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.equipmentTabRecords
+import com.grm.rotagrm.domain.model.homeAlerts
+import com.grm.rotagrm.domain.model.isAwaitingMaintenanceStatus
 import com.grm.rotagrm.settings.DEFAULT_PAUSE_STATUS
 import com.grm.rotagrm.settings.MEAL_STATUS
 import com.grm.rotagrm.settings.configurableStatus
@@ -149,12 +151,13 @@ private fun MetricPanel(label: String, value: String, icon: Int, modifier: Modif
 private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onPermission: () -> Unit) {
     val snapshot = state.snapshot
     val equipment = snapshot?.equipment.orEmpty()
+    val visibleAlerts = homeAlerts(state.alerts)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading("Visão geral", if (state.apiAvailable) "Conectado" else if (snapshot != null) "Último dado salvo" else "Sem dados") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MetricPanel("Equipamentos", snapshot?.equipment?.size?.toString() ?: "—", R.drawable.ic_equipment, Modifier.weight(1f))
-                MetricPanel("Alertas ativos", if (snapshot != null) state.alerts.size.toString() else "—", R.drawable.ic_equipment, Modifier.weight(1f))
+                MetricPanel("Alertas ativos", if (snapshot != null) visibleAlerts.size.toString() else "—", R.drawable.ic_equipment, Modifier.weight(1f))
             }
         }
         item {
@@ -188,14 +191,14 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
             }
         }
         item { SectionHeading("Alertas ativos") }
-        if (state.alerts.isEmpty()) item {
+        if (visibleAlerts.isEmpty()) item {
             Text(if (snapshot == null) "Aguardando conexão com o servidor." else "Nenhum alerta ativo.", color = MutedText, style = MaterialTheme.typography.bodySmall)
         }
-        items(state.alerts, key = { "alert-${it.id}" }) { alert ->
+        items(visibleAlerts, key = { "alert-${it.id}" }) { alert ->
             OutlinePanel(alert = true) {
                 Text(alert.equipmentTag, fontWeight = FontWeight.Bold, color = AlertRed)
                 Text(alert.status, style = MaterialTheme.typography.labelMedium)
-                Text(if (alert.maintenanceEvent) "Manutenção em andamento." else "Excedido em ${clockDuration(alert.exceededSeconds)} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
+                Text(if (isAwaitingMaintenanceStatus(alert.status)) "Aguardando manutenção." else "Excedido em ${clockDuration(alert.exceededSeconds)} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
                 Text("Permanece aqui até a atualização confirmar a mudança do apontamento.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }

@@ -66,4 +66,35 @@ class MonitoringRegressionTest {
         assertTrue(AlertEvaluator.activeAlerts(changed, MonitoringSettings(), now).isEmpty())
         assertTrue(reconcileActiveAlerts(raised, emptyList(), changed, now).isEmpty())
     }
+
+    @Test fun homeKeepsOnlyAwaitingMaintenanceAndMealButHidesPauseAndExecutionMaintenance() {
+        val reasons = listOf("AG MANUTENCAO", "EXEC MANUT CORRETIVA", "EXEC MANUT PREVENTIVA",
+            "EXEC MANUT PREVENTIVA - 250 HRS", DEFAULT_PAUSE_STATUS, "REFEIÇÃO", "OPERANDO")
+        val all = reasons.mapIndexed { index, reason -> OperationalAlert(
+            "id-$index", "CB-$index", reason, 960L, 900L, 60L, maintenanceEvent = isMaintenanceStatus(reason)) }
+        val original = all.toList()
+        assertEquals(listOf(all[0], all[5]), homeAlerts(all))
+        assertEquals(original, all) // Presentation never edits the monitor's list.
+        assertEquals(4, all.count { it.maintenanceEvent })
+        assertEquals(2, homeAlerts(all).size) // Home count uses the same filtered list.
+        listOf("REFEIÇÃO", "refeicao", "  REFEICAO  ").forEach { reason ->
+            val alert = all[5].copy(status = reason)
+            assertEquals(listOf(alert), homeAlerts(listOf(alert)))
+        }
+        listOf(DEFAULT_PAUSE_STATUS, "PAUSA ERGONÔMICA", "  pausa   ergonomica  ").forEach { reason ->
+            assertTrue(homeAlerts(listOf(all[4].copy(status = reason))).isEmpty())
+        }
+    }
+
+    @Test fun awaitingMaintenanceMatchesAccentsCaseSpacingAndClearsAfterPointingChanges() {
+        listOf("AG MANUTENÇÃO", "ag manutencao", "  AG   MANUTENCAO  ").forEach { reason ->
+            assertTrue(isAwaitingMaintenanceStatus(reason))
+            val alert = OperationalAlert("maintenance:m", "CB-1", reason, 0L, 0L, 0L, true)
+            assertEquals(listOf(alert), homeAlerts(listOf(alert)))
+            assertTrue(reconcileActiveAlerts(listOf(alert), emptyList(), snapshot(record("new", "OPERANDO")), now).isEmpty())
+        }
+        assertFalse(isAwaitingMaintenanceStatus("EXEC MANUT CORRETIVA"))
+        assertFalse(isAwaitingMaintenanceStatus("LIBERADO PELA MANUT"))
+        assertTrue(homeAlerts(emptyList()).isEmpty())
+    }
 }

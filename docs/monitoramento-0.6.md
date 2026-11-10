@@ -1,4 +1,4 @@
-# Status Operacional 0.6 — monitoramento sem Firebase
+# Status Operacional 0.6.1 — monitoramento sem Firebase
 
 Este documento prevalece sobre instruções históricas de autenticação, reconhecimento e alertas apenas em primeiro plano. O acesso continua livre e somente leitura; nenhum segredo administrativo entra no APK.
 
@@ -7,7 +7,7 @@ Este documento prevalece sobre instruções históricas de autenticação, recon
 - Manutenções contém os quatro motivos atuais, sem filtro de início hoje.
 - Ajustes tem somente pausa ergonômica e refeição como motivos configuráveis. Mantém escolha manual, pausa padrão15min, refeição sem limite automático até configuração. Preferências antigas são canonicalizadas; limites de manutenção e reconhecimento não governam mais os alertas.
 - Início é reconstruído apenas de fatias contíguas do mesmo ID/equipamento/motivo. Não é data da coleta ou do último turno. startConfirmed indica predecessor com outro ID. Sem histórico suficiente, UI indica abertura não confirmada e distingue primeiro trecho disponível. Nunca inventa data de abertura.
-- Alertas levantados permanecem até um snapshot válido confirmar mudança de ID/motivo; alteração de limite não reconhece o alerta. Snapshot stale/offline não prova encerramento. Todas as manutenções atuais aparecem em Início; som de manutenção somente para novos IDs observados após baseline.
+- Alertas levantados permanecem até um snapshot válido confirmar mudança de ID/motivo; alteração de limite não reconhece o alerta. Snapshot stale/offline não prova encerramento. Início mostra somente alertas de REFEIÇÃO e AG MANUTENÇÃO, com a contagem da mesma lista. Pausa e execução de manutenção não aparecem nos alertas de Início. A aba Manutenções mantém os quatro motivos. O filtro é somente visual: monitor e regras sonoras permanecem iguais, com som de manutenção somente para novos IDs observados após baseline.
 
 ## Segundo plano
 Um motor por processo é compartilhado entre Activity, serviço e Worker, com mutex de consulta e deduplicação persistida. Ao abrir com permissão, inicia serviço dataSync visível por notificação fixa; é possível pausar/retomar em Ajustes. O serviço consulta o backend, não o GRM diretamente. Não foi usado specialUse para contornar limites do Android.

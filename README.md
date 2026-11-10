@@ -1,8 +1,10 @@
 # Status Operacional — acesso livre
 
-## Versão atual 0.6.0-test
+## Versão atual 0.6.1-test
 
 Sem login nem código. Monitor em segundo plano sem Firebase, apoio periódico, ajustes somente pausa/refeição, alertas sem reconhecimento, datas reconstruídas das fatias do mesmo apontamento. Equipamentos em manutenção ficam somente na aba Manutenções. Consulte [monitoramento0.6](docs/monitoramento-0.6.md), que prevalece sobre instruções anteriores, e [acesso livre](docs/acesso-livre.md).
+
+Alertas de Início: somente REFEIÇÃO e AG MANUTENÇÃO, inclusive na contagem. Pausa e execução de manutenção ocultadas apenas nessa tela, sem alterar som e monitor.
 
 O backend é público para leitura; token GRM e senha do banco permanecem privados no servidor. Escritas não foram liberadas. Os detalhes abaixo descrevem a versão histórica 0.4.0, não o fluxo de acesso atual.
 

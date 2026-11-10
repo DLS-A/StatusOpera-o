@@ -1,4 +1,9 @@
-# Status Operacional — build de teste 0.6.0-test
+# Status Operacional — build de teste 0.6.1-test
+
+## Correção 0.6.1
+- versionCode 7; Início mantém somente alertas de REFEIÇÃO e AG MANUTENÇÃO, com a mesma contagem filtrada.
+- Pausa e execução de manutenção ocultadas apenas no Início; monitor, som, configurações e aba Manutenções preservados.
+- Duas regressões JUnit adicionais verificam a seleção, acentos/espaços, preservação da lista do monitor e encerramento após mudança do apontamento. Resultado depende do build externo, sem homologação física.
 
 ## Correção0.6
 - versionCode6; serviço dataSync + apoio WorkManager sem Firebase. Motor compartilhado entre Activity/serviço/Worker, sem consultas paralelas e sem reconhecimento.
