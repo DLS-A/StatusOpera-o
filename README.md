@@ -1,12 +1,12 @@
-# ROTA GRM — fontes atualizadas
+# Status Operacional — ativação por telefone
 
-**Entrega de código, não de aplicativo instalado.** Trabalho executado em cópia separada do projeto recebido. Mantidos Kotlin/Jetpack Compose/Material 3, FastAPI, Supabase e Render; módulo canônico `android/`. O original não foi editado. Não há APK novo, deploy ou validação operacional real nesta entrega.
+**Backend publicado e dados reais validados.** Mantidos Kotlin/Jetpack Compose/Material 3, FastAPI, Supabase e Render; módulo canônico `android/`. Original e GitHub main preservados. Nesta versão, um código compartilhado ativa cada telefone uma única vez, sem e-mail/login. Consulte [ativação e implantação atual](docs/ativacao.md), que prevalece sobre os documentos históricos de OAuth.
 
 ## Mudanças principais
 
 - Consulta GRM GET centralizada por ciclo, com coordenação PostgreSQL entre instâncias; celulares apenas leem o snapshot compartilhado.
 - Payload persistido, restauração após reinício e último snapshot válido marcado como desatualizado durante falhas.
-- JWT assimétrico, cliente/audience/issuer, usuário confirmado e autorizado, sessão ativa e revogação local do servidor.
+- Credencial opaca individual por telefone, hash no banco, revogação individual e limitação persistente das tentativas de ativação.
 - Cache Android cifrado por usuário; isolamento entre sessões, cancelamento de consultas, logout e erros 401/403 tratados.
 - Cinco abas e Material 3 preservados; banner de frescor e contagens operacionais apenas com categorias KPI confirmadas.
 - FCM opcional, registro de dispositivo autorizado, fila privada e payload genérico; desabilitado por padrão.
@@ -14,18 +14,18 @@
 ## Antes de usar
 
 1. **Revogar e substituir credenciais expostas** em `env`/logs do projeto original. Esses arquivos não foram incluídos. Exclusão do pacote não revoga tokens.
-2. Seguir [instalação administrativa](docs/instalacao.md): Supabase, migrations, CA/TLS, Render/OAuth, Firebase opcional e assinatura externa.
-3. Preencher os identificadores públicos de `android/rota-public.properties` uma vez por build. Não configurar a API por celular, nem colocar token GRM/senha do banco no APK.
-4. Executar [validação operacional](docs/validacao.md). Login real, GRM/Supabase, FCM/aparelho e Android build/runtime continuam pendentes.
+2. Seguir [documentação atual](docs/ativacao.md): ativação, Supabase privado, TLS e Render gratuito. As instruções OAuth antigas não se aplicam a esta implantação.
+3. A URL HTTPS real já está em `android/rota-public.properties`. Nunca incluir código compartilhado, token GRM ou senha do banco no APK.
+4. Validar instalação/interface no telefone. O backend foi testado remotamente; isso não comprova o runtime Android no aparelho.
 
 ## Organização
 
 | Diretório/arquivo | Função |
 |---|---|
-| `android/` | Aplicativo nativo, versão de fontes 0.2.0, sem binário compilado |
+| `android/` | Aplicativo nativo 0.4.0-test, build externo GitHub Actions |
 | `backend/app/` | API autenticada, snapshots compartilhados, sessões e FCM |
-| `supabase/migrations/` | Três migrations ordenadas, tabelas operacionais privadas |
-| `render.yaml`, `backend/Dockerfile` | Preparação de um serviço existente; não executar sem autorização administrativa |
+| `supabase/migrations/` | Quatro migrations ordenadas, tabelas operacionais privadas |
+| `render.yaml`, `backend/Dockerfile` | Serviço Docker no Render gratuito, implantação autorizada |
 | `.env.example` | Modelo sem segredos preenchidos |
 | `test_*.py`, `backend/requirements-test.txt` | Testes locais isolados |
 | `docs/` | Instalação, uso, validação, resultados e manifestos |
@@ -33,11 +33,11 @@
 
 ## API
 
-- Público: `GET /healthz` (somente processo); páginas `/oauth/consent` e `/oauth/consent.js`.
+- Público: `GET /healthz` (somente processo); `POST /v1/activation` (código obrigatório, tentativas limitadas).
 - Bearer obrigatório: `GET /v1/snapshot`, `/v1/readiness`, `/v1/session`.
-- Sessão/notificação: `POST /v1/session/logout`, `PUT`/`DELETE /v1/devices/{uuid}`.
+- Desativação: `POST /v1/session/logout`. Rotas FCM recusam credenciais de ativação; push desabilitado nesta implantação. Páginas OAuth retornam 404.
 - Nenhuma escrita operacional GRM. POST/PUT/PATCH/DELETE no snapshot retornam 405.
-- `/v1/snapshot` não consulta GRM nem grava histórico; leitura autenticada continua verificando usuário e sessão. Sem snapshot válido: 503. Último válido disponível em falha: 200 com `stale=true`.
+- `/v1/snapshot` não consulta GRM nem grava histórico; cada leitura verifica a credencial individual no banco. Sem snapshot válido: 503. Último válido disponível em falha: 200 com `stale=true`.
 - `healthz=200` não comprova login, banco, GRM, atualização ou push. OpenAPI permanece desativado.
 
 ## Testes
@@ -46,7 +46,7 @@ Instalar dependências de teste em ambiente isolado e executar:
 
 ```sh
 python -m pip install -r backend/requirements-test.txt
-python -m unittest -v test_datetime_grm test_backend_snapshot test_security_services
+python -m unittest -v test_datetime_grm test_backend_snapshot test_security_services test_activation
 ```
 
 A integração PostgreSQL requer opt-in explícito e banco **local descartável** `rota_grm_local_test`; não lê a URL Supabase:

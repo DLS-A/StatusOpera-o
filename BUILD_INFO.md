@@ -1,4 +1,14 @@
-# Status Operacional — build de teste 0.3.0-test
+# Status Operacional — build de teste 0.4.0-test
+
+## Atualização operacional — 10/11/2026
+- URL real https://status-operacional-api.onrender.com configurada; backend free publicado e validado com GRM/Supabase reais.
+- Ativação única por código compartilhado; credenciais individuais cifradas por telefone; sem e-mail/login/OAuth no APK; código apenas em entrega privada.
+- versionCode 4; tema sem barra Android duplicada; FCM desabilitado.
+- 67 testes Python/integração PostgreSQL local aprovados; smoke remoto de ativação/snapshot/readiness/revogação individual aprovado.
+- Workflow externo agora compila checkout da branch isolada, não ZIP antigo. Execução 42823754826 em compilação na última verificação.
+- Leia docs/ativacao.md; as informações abaixo registram a build histórica 0.3.0-test e NÃO descrevem a configuração atual.
+
+## Histórico: 0.3.0-test
 
 ## O que foi aplicado
 - Nome visível Status Operacional; azul #2E3192 e branco.

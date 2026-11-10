@@ -1,6 +1,14 @@
 # ROTA GRM — Android existente
 
-Kotlin/Jetpack Compose/Material 3 preservados. Fontes versão `0.2.0` (`versionCode=2`), sem APK compilado nesta execução. O módulo duplicado do projeto original foi mantido apenas no original; use `android/` como canônico.
+## Versão atual: 0.4.0-test, versionCode 4
+
+Kotlin/Jetpack Compose/Material 3 preservados. A URL real do backend já está configurada. Ativação por código uma vez por telefone, sem e-mail/login, sem AppAuth. Compilação externa no GitHub Actions. Consulte [documentação atual](../docs/ativacao.md).
+
+Para build debug externo: `./gradlew testDebugUnitTest assembleDebug`. Para release: URL HTTPS e os quatro valores `ROTA_SIGNING_*` reais; não é mais exigido issuer/client OAuth. FCM continua desabilitado. Cache cifrado limitado a 24 horas desde a última validação. Nenhum código de ativação ou segredo deve entrar no arquivo de configuração pública.
+
+## Referência histórica abaixo — OAuth da versão anterior
+
+As orientações OAuth abaixo não se aplicam à versão atual. O módulo duplicado do original não faz parte do build; use somente `android/` como canônico.
 
 ## Configuração administrativa por build
 
