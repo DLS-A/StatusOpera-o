@@ -1,7 +1,6 @@
 package com.grm.rotagrm
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.grm.rotagrm.auth.OidcAuthManager
@@ -35,6 +34,7 @@ import java.time.Instant
 
 data class OperationalUiState(
     val configured: Boolean = false,
+    val activationSaved: Boolean = false,
     val signedIn: Boolean = false,
     val loading: Boolean = false,
     val apiAvailable: Boolean = false,
@@ -60,7 +60,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
     private val acknowledgedAlerts = mutableSetOf<String>()
     private val maintenanceTracker = NewMaintenanceTracker()
     private val _state = MutableStateFlow(
-        OperationalUiState(configured = auth.isConfigured),
+        OperationalUiState(configured = auth.isConfigured, activationSaved = auth.hasStoredSession),
     )
     val state: StateFlow<OperationalUiState> = _state.asStateFlow()
 
@@ -68,7 +68,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         OperationalNotifications.createChannels(application)
         viewModelScope.launch {
             auth.sessionAvailable.collect { available ->
-                if (!available && identity != null) clearLocalSession("Sessão encerrada. Entre novamente.")
+                if (!available && identity != null) clearLocalSession("Ativação encerrada. Consulte o responsável.")
             }
         }
         viewModelScope.launch {
@@ -95,27 +95,21 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         if (auth.hasStoredSession) viewModelScope.launch { establishSession() }
     }
 
-    suspend fun authorizationIntent(): Intent = try {
-        _state.value = _state.value.copy(loading = true)
-        auth.authorizationIntent()
-    } catch (error: CancellationException) {
-        _state.value = _state.value.copy(loading = false)
-        throw error
-    } catch (_: Exception) {
-        _state.value = _state.value.copy(loading = false, message = "Não foi possível iniciar o login. Consulte o administrador.")
-        throw IllegalStateException("OIDC authorization unavailable.")
-    }
-
-    suspend fun completeAuthorization(resultIntent: Intent) {
+    suspend fun activate(code: String) {
+        if (_state.value.loading) return
         val version = generation
+        _state.value = _state.value.copy(loading = true, message = "Ativando telefone…")
         try {
-            auth.completeAuthorization(resultIntent)
+            auth.activate(code)
             if (generation != version) return
+            _state.value = _state.value.copy(activationSaved = true)
             establishSession()
         } catch (error: CancellationException) {
             throw error
+        } catch (error: IllegalArgumentException) {
+            _state.value = _state.value.copy(loading = false, message = error.message ?: "Código inválido.")
         } catch (_: Exception) {
-            clearLocalSession("Login não concluído. Consulte o administrador se o erro persistir.")
+            _state.value = _state.value.copy(loading = false, message = "Não foi possível ativar. Verifique a conexão e tente novamente.")
         }
     }
 
@@ -123,7 +117,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         val version = generation
         _state.value = _state.value.copy(loading = true)
         try {
-            val verified = try { repository.session()
+            val verified = try { repository.session().also { auth.markVerified() }
             } catch (error: SessionAccessException) { throw error
             } catch (error: CancellationException) { throw error
             } catch (_: Exception) {
@@ -138,25 +132,23 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
                 runCatching { HttpOperationalRepository.decodeSnapshot(it).copy(stale = true, sourceAvailable = false) }.getOrNull()
             }
             _state.value = _state.value.copy(signedIn = true, snapshot = stored, loading = false,
-                message = if (stored != null) "Exibindo último snapshot salvo; verificando atualização." else "Sessão validada.")
+                message = if (stored != null) "Exibindo último snapshot salvo; verificando atualização." else "Telefone ativado.")
             PushRegistrationWorker.enqueue(getApplication())
             refresh()
         } catch (error: CancellationException) { throw error
         } catch (error: SessionAccessException) {
-            if (generation == version) clearLocalSession(if (error.denied) "Usuário sem autorização." else "Sessão encerrada. Entre novamente.")
+            if (generation == version) clearLocalSession("Ativação inválida ou revogada. Consulte o responsável.")
         } catch (_: Exception) {
-            if (generation == version) clearLocalSession("Não foi possível validar a sessão. Entre novamente quando a conexão retornar.")
+            if (generation == version) _state.value = _state.value.copy(loading = false, message = "Aguardando conexão para validar este telefone. A ativação foi preservada.")
         } finally {
             if (generation == version) _state.value = _state.value.copy(loading = false)
         }
     }
 
-    fun loginCancelled() {
-        _state.value = _state.value.copy(loading = false, message = "Login cancelado ou não concluído.")
-    }
-
     suspend fun refresh() {
         val old = _state.value
+        if (old.loading) return
+        if (identity == null && auth.hasStoredSession) { establishSession(); return }
         val currentIdentity = identity ?: return
         if (!old.signedIn || old.loading || !refreshMutex.tryLock()) return
         val version = generation
@@ -168,6 +160,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
             refreshJob = request
             val result = request.await()
             if (_state.value.signedIn && generation == version && identity == currentIdentity) {
+                auth.markVerified()
                 val saved = runCatching { cache.saveSnapshot(currentIdentity, result.cacheJson) }.isSuccess
                 if (!result.stale) maintenanceTracker.update(result.maintenanceAlerts)
                 _state.value = _state.value.copy(snapshot = result, apiAvailable = true,
@@ -179,10 +172,14 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
             currentCoroutineContext().ensureActive()
             if (generation == version) throw error
         } catch (error: SessionAccessException) {
-            if (generation == version) clearLocalSession(if (error.denied) "Usuário sem autorização." else "Sessão expirada. Entre novamente.")
+            if (generation == version) clearLocalSession("Ativação inválida ou revogada. Consulte o responsável.")
         } catch (_: Exception) {
             if (generation == version) {
-                if (!auth.canReadOffline(currentIdentity)) clearLocalSession("Sessão não validada. Entre novamente quando a conexão retornar.")
+                if (!auth.canReadOffline(currentIdentity)) {
+                    identity = null
+                    _state.value = _state.value.copy(signedIn = false, snapshot = null, alerts = emptyList(), apiAvailable = false,
+                        message = "Aguardando conexão para validar este telefone. A ativação foi preservada.")
+                }
                 else _state.value = _state.value.copy(apiAvailable = false,
                     snapshot = _state.value.snapshot?.copy(stale = true, sourceAvailable = false),
                     message = "Conexão indisponível; exibindo último snapshot válido, sem novos alertas.")
@@ -220,7 +217,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
         pushDelivery.clear()
         lastNotificationAt.clear(); acknowledgedAlerts.clear(); maintenanceTracker.reset()
         OperationalNotifications.cancelAll(getApplication())
-        _state.value = _state.value.copy(signedIn = false, snapshot = null, loading = false, apiAvailable = false,
+        _state.value = _state.value.copy(signedIn = false, activationSaved = false, snapshot = null, loading = false, apiAvailable = false,
             alerts = emptyList(), acknowledgedAlertIds = emptySet(), message = message)
         auth.signOut()
         settingsRepository.clearAlertTracking()

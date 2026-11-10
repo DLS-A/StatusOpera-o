@@ -40,8 +40,8 @@ android {
         applicationId = "com.grm.rotagrm"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0-test"
+        versionCode = 4
+        versionName = "0.4.0-test"
         manifestPlaceholders["appAuthRedirectScheme"] = "com.grm.rotagrm"
         manifestPlaceholders["fcmEnabled"] = fcmEnabled.toString()
         buildConfigField("boolean", "FCM_ENABLED", fcmEnabled.toString())
@@ -101,14 +101,11 @@ dependencies {
 
 gradle.taskGraph.whenReady {
     if (allTasks.any { it.name.contains("Release") && (it.name.startsWith("assemble") || it.name.startsWith("bundle")) }) {
-        listOf("rotaApiBaseUrl", "rotaOidcIssuer").forEach { name ->
+        listOf("rotaApiBaseUrl").forEach { name ->
             val uri = URI(publicValue(name))
             check(uri.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null && uri.query == null && uri.fragment == null) {
                 "Configure $name com a URL HTTPS real."
             }
-        }
-        check(publicValue("rotaOidcClientId").isNotBlank() && publicValue("rotaOidcAudience").isNotBlank()) {
-            "Configure os identificadores OAuth públicos reais."
         }
         check(signingReady && file(signingFile!!).isFile) { "Configure a assinatura release no ambiente seguro de compilação." }
     }

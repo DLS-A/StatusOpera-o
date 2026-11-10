@@ -2,7 +2,8 @@ services:
   - type: web
     name: rota-grm-backend
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
+    region: virginia
     dockerfilePath: ./backend/Dockerfile
     dockerContext: .
     healthCheckPath: /healthz
@@ -13,17 +14,9 @@ services:
         sync: false
       - key: SUPABASE_DB_URL
         sync: false
-      - key: SUPABASE_URL
-        value: https://byjmnvnojwssjswyeybj.supabase.co
-      - key: SUPABASE_PUBLISHABLE_KEY
-        sync: false
-      - key: OIDC_ISSUER
-        value: https://byjmnvnojwssjswyeybj.supabase.co/auth/v1
-      - key: OIDC_AUDIENCE
-        value: authenticated
-      - key: OIDC_CLIENT_ID
-        sync: false
-      - key: OIDC_ALLOWED_EMAILS
+      - key: AUTH_MODE
+        value: activation
+      - key: ACTIVATION_CODE_SHA256
         sync: false
       # Trust forwarding headers only on Render's proxy-only container ingress.
       # For other hosting, replace * with the exact trusted proxy addresses.

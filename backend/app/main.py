@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .auth import require_user, provider_logout, public_key
+from .activation import activation_enabled, enroll, require_device, revoke_device
 from .grm_client import GrmClient
 from .notifications import FirebaseNotifier
 from .settings import Settings, https_url
@@ -60,6 +61,8 @@ def get_store(request: Request):
 
 
 def authenticated_user(request: Request, credentials=Depends(bearer)):
+    if activation_enabled():
+        return require_device(credentials, getattr(request.app.state, "store", None))
     # Missing bearer must return 401 even on an unconfigured server.
     if credentials is None:
         return require_user(None)
@@ -133,8 +136,24 @@ def session(claims=Depends(authenticated_user)):
     return {"userId": claims["sub"], "sessionId": claims["session_id"], "email": claims["email"]}
 
 
+class ActivationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(min_length=12, max_length=80)
+
+
+@app.post("/v1/activation")
+def activate(body: ActivationRequest, request: Request, store=Depends(get_store)):
+    if not activation_enabled():
+        raise HTTPException(404, "Ativação não disponível.")
+    peer = request.client.host if request.client else "unknown"
+    return enroll(store, body.code, peer)
+
+
 @app.post("/v1/session/logout")
 def logout(claims=Depends(authenticated_user), credentials=Depends(bearer), store=Depends(get_store)):
+    if claims.get("activation"):
+        revoke_device(store, claims)
+        return {"serverRevoked": True, "providerRevoked": True}
     store.revoke_session(claims)
     return {"serverRevoked": True, "providerRevoked": provider_logout(credentials.credentials)}
 
@@ -169,6 +188,8 @@ class DeviceRegistration(BaseModel):
 
 @app.put("/v1/devices/{device_id}")
 def register_device(device_id: UUID, body: DeviceRegistration, claims=Depends(authenticated_user), store=Depends(get_store)):
+    if claims.get("activation"):
+        raise HTTPException(403, "Push desabilitado nesta versão.")
     try:
         store.register_device(claims, device_id, body.token, body.preferences.model_dump())
     except PermissionError:
@@ -178,12 +199,16 @@ def register_device(device_id: UUID, body: DeviceRegistration, claims=Depends(au
 
 @app.delete("/v1/devices/{device_id}")
 def remove_device(device_id: UUID, claims=Depends(authenticated_user), store=Depends(get_store)):
+    if claims.get("activation"):
+        raise HTTPException(403, "Push desabilitado nesta versão.")
     store.remove_device(claims, device_id)
     return {"removed": True}
 
 
 @app.get("/oauth/consent", response_class=HTMLResponse)
 def oauth_consent():
+    if activation_enabled():
+        raise HTTPException(404, "Não disponível nesta versão.")
     try:
         supabase = https_url(os.getenv("SUPABASE_URL", ""))
         key = public_key()
@@ -198,4 +223,6 @@ def oauth_consent():
 
 @app.get("/oauth/consent.js")
 def oauth_script():
+    if activation_enabled():
+        raise HTTPException(404, "Não disponível nesta versão.")
     return Response(Path(__file__).with_name("oauth_consent.js").read_text(encoding="utf-8"), media_type="text/javascript")

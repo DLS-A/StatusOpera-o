@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import threading
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 import psycopg
@@ -16,6 +17,9 @@ from backend.app.store import PostgresStore
 from backend.app.settings import Settings
 from backend.app.snapshot_service import build_snapshot
 from backend.app.notifications import plan_alerts
+from backend.app.activation import digest, enroll, require_device, revoke_device
+from fastapi import HTTPException
+from types import SimpleNamespace
 from functions import normalizar_apontamento
 
 DSN = "dbname=rota_grm_local_test host=/var/run/postgresql"
@@ -48,7 +52,7 @@ class PostgresIntegrationTests(unittest.TestCase):
         self.store = LocalStore(Settings('https://example.invalid/grm','test',DSN))
         self.claims = {'sub':str(uuid4()), 'session_id':str(uuid4())}
         with self.store.connection() as conn:
-            conn.execute("truncate operational.notification_outbox,operational.devices,operational.records,operational.snapshot_runs,operational.revoked_sessions")
+            conn.execute("truncate operational.notification_outbox,operational.devices,operational.records,operational.snapshot_runs,operational.revoked_sessions,operational.activated_devices,operational.activation_attempts")
             conn.execute("update operational.poll_state set attempted_at=null,failed=false")
             conn.execute("truncate auth.users,auth.sessions")
             conn.execute("insert into auth.users values(%s,'allowed@example.com',now(),null)", (self.claims['sub'],))
@@ -68,12 +72,30 @@ class PostgresIntegrationTests(unittest.TestCase):
     def test_migrations_and_private_role_permissions(self):
         with self.store.connection() as conn:
             rows = conn.execute("select relname,relrowsecurity from pg_class join pg_namespace n on n.oid=relnamespace where n.nspname='operational' and relkind='r'").fetchall()
-            self.assertEqual(len(rows),6)
+            self.assertEqual(len(rows),8)
             self.assertTrue(all(row['relrowsecurity'] for row in rows))
             for role in ('anon','authenticated'):
                 self.assertFalse(conn.execute("select has_schema_privilege(%s,'operational','USAGE') as allowed",(role,)).fetchone()['allowed'])
                 for row in rows:
                     self.assertFalse(conn.execute("select has_table_privilege(%s,%s,'SELECT,INSERT,UPDATE,DELETE') as allowed",(role,'operational.'+row['relname'])).fetchone()['allowed'])
+
+    def test_activation_throttle_survives_store_recreation_and_reset_window(self):
+        code = 'LOCAL-TEST-ACTIVATION'
+        with patch.dict(os.environ, {'ACTIVATION_CODE_SHA256': digest(code)}):
+            for _ in range(10):
+                with self.assertRaises(HTTPException) as err: enroll(self.store, 'WRONG-CODE', 'local-peer')
+                self.assertEqual(err.exception.status_code, 403)
+            other = LocalStore(self.store.settings)
+            with self.assertRaises(HTTPException) as err: enroll(other, code, 'local-peer')
+            self.assertEqual(err.exception.status_code, 429)
+            with other.connection() as conn:
+                conn.execute("update operational.activation_attempts set window_start=now()-interval '16 minutes'")
+            device = enroll(other, code, 'local-peer')
+            credential = SimpleNamespace(scheme='Bearer', credentials=device['accessToken'])
+            claims = require_device(credential, other)
+            self.assertEqual(claims['sub'], device['deviceId'])
+            revoke_device(other, claims)
+            with self.assertRaises(HTTPException): require_device(credential, self.store)
 
     def test_poll_persists_full_payload_and_restores_after_restart(self):
         payload,state = self.store.poll(self.produce)

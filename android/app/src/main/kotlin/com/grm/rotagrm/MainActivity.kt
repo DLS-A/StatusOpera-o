@@ -31,12 +31,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var settings: MonitoringSettingsRepository
     private var notificationsAllowed by mutableStateOf(false)
 
-    private val loginLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        lifecycleScope.launch {
-            val intent = result.data
-            if (intent == null) viewModel.loginCancelled() else viewModel.completeAuthorization(intent)
-        }
-    }
     private val notificationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         notificationsAllowed = granted || Build.VERSION.SDK_INT < 33
         PushRegistrationWorker.enqueue(this)
@@ -53,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     OperationalScreen(
                         state = state,
                         notificationsAllowed = notificationsAllowed,
-                        onLogin = ::startLogin,
+                        onActivate = { code -> lifecycleScope.launch { viewModel.activate(code) } },
                         onRefresh = { lifecycleScope.launch { viewModel.refresh() } },
                         onSignOut = viewModel::signOut,
                         onRequestNotifications = ::requestNotifications,
@@ -83,13 +77,6 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         notificationsAllowed = OperationalNotifications.hasPermission(this)
         PushRegistrationWorker.enqueue(this)
-    }
-
-    private fun startLogin() {
-        lifecycleScope.launch {
-            runCatching { viewModel.authorizationIntent() }
-                .onSuccess(loginLauncher::launch)
-        }
     }
 
     private fun requestNotifications() {

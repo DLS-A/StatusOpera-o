@@ -14,8 +14,8 @@ const supabase = createClient(root.dataset.supabaseUrl, root.dataset.publishable
 
 function safeRedirect(value) {
   const url = new URL(value);
-  if (url.href !== "com.grm.rotagrm:/oauth2redirect" &&
-      !(url.protocol === "com.grm.rotagrm:" && url.pathname === "/oauth2redirect" && !url.host)) {
+  if (url.protocol !== "com.grm.rotagrm:" || url.host !== "auth" ||
+      url.pathname !== "/oauth2redirect" || url.username || url.password || url.hash) {
     throw new Error("Redirecionamento não autorizado.");
   }
   return url.href;

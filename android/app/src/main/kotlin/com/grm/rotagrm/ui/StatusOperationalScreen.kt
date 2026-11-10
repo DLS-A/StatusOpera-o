@@ -15,6 +15,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grm.rotagrm.BuildConfig
@@ -47,7 +48,7 @@ private enum class OperationalTab(val title: String, val shortTitle: String, val
 fun OperationalScreen(
     state: OperationalUiState,
     notificationsAllowed: Boolean,
-    onLogin: () -> Unit,
+    onActivate: (String) -> Unit,
     onRefresh: () -> Unit,
     onSignOut: () -> Unit,
     onRequestNotifications: () -> Unit,
@@ -61,7 +62,16 @@ fun OperationalScreen(
     onRestoreSettings: () -> Unit,
 ) {
     var tab by remember { mutableStateOf(OperationalTab.HOME) }
-    // A estrutura pode ser inspecionada sem login; dados nunca são expostos.
+    var activationCode by remember { mutableStateOf("") }
+    var confirmDeactivation by remember { mutableStateOf(false) }
+    if (confirmDeactivation) AlertDialog(
+        onDismissRequest = { confirmDeactivation = false },
+        title = { Text("Desativar este telefone?") },
+        text = { Text("Os dados locais serão apagados. Você precisará do código do responsável para ativar novamente.") },
+        confirmButton = { TextButton(onClick = { confirmDeactivation = false; onSignOut() }) { Text("Desativar") } },
+        dismissButton = { TextButton(onClick = { confirmDeactivation = false }) { Text("Cancelar") } },
+    )
+    // A estrutura pode ser inspecionada sem ativação; dados nunca são expostos.
     val visible = if (state.signedIn) state else state.copy(
         snapshot = null, alerts = emptyList(), acknowledgedAlertIds = emptySet(), apiAvailable = false,
     )
@@ -105,14 +115,26 @@ fun OperationalScreen(
                     color = Color(0xFFF4F4FB), shape = RoundedCornerShape(10.dp),
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(if (state.configured) "Acesso protegido" else "APK de teste · configuração pendente", fontWeight = FontWeight.SemiBold, color = BrandBlue)
+                        Text(if (state.activationSaved) "Telefone ativado" else if (state.configured) "Ativar este telefone" else "Configuração pendente", fontWeight = FontWeight.SemiBold, color = BrandBlue)
                         Text(
-                            if (state.configured) "Entre para carregar os dados autorizados."
-                            else "Backend e client ID não configurados. Você pode revisar as abas e os ajustes, mas não consultar dados reais.",
+                            if (state.activationSaved) "A ativação está salva. Conecte-se à internet para consultar os dados."
+                            else if (state.configured) "Digite o código fornecido pelo responsável uma única vez. Depois, o aplicativo abre direto."
+                            else "Servidor não configurado. Os dados reais não estão disponíveis.",
                             style = MaterialTheme.typography.bodySmall,
                         )
                         if (state.message.isNotBlank()) Text(state.message, style = MaterialTheme.typography.bodySmall)
-                        Button(onClick = onLogin, enabled = state.configured && !state.loading) { Text("Entrar com segurança") }
+                        if (state.activationSaved) {
+                            Button(onClick = onRefresh, enabled = !state.loading) { Text("Tentar conexão") }
+                        } else if (state.configured) {
+                            OutlinedTextField(
+                                value = activationCode, onValueChange = { activationCode = it.take(80) },
+                                label = { Text("Código de ativação") }, singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                enabled = !state.loading, modifier = Modifier.fillMaxWidth(),
+                            )
+                            Button(onClick = { val code = activationCode; activationCode = ""; onActivate(code) },
+                                enabled = activationCode.trim().length >= 12 && !state.loading) { Text("Ativar telefone") }
+                        }
                     }
                 }
             } else {
@@ -121,7 +143,7 @@ fun OperationalScreen(
             }
             Box(Modifier.weight(1f)) {
                 when (tab) {
-                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, onSignOut, onRequestNotifications, onAcknowledge)
+                    OperationalTab.HOME -> OverviewContent(visible, notificationsAllowed, onRefresh, { confirmDeactivation = true }, onRequestNotifications, onAcknowledge)
                     OperationalTab.EQUIPMENT -> EquipmentContent(visible.snapshot?.equipment.orEmpty(), visible)
                     OperationalTab.PAUSES -> RecordContent("Pausas ergonômicas", visible.snapshot?.pauses.orEmpty(), visible, R.drawable.ic_pause)
                     OperationalTab.MAINTENANCE -> RecordContent("Manutenções abertas", visible.snapshot?.maintenance.orEmpty(), visible, R.drawable.ic_maintenance)
@@ -192,7 +214,7 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onRefresh, enabled = state.signedIn && !state.loading, modifier = Modifier.weight(1f)) { Text("Atualizar") }
-                if (state.signedIn) OutlinedButton(onClick = onSignOut, modifier = Modifier.weight(1f)) { Text("Sair") }
+                if (state.signedIn) OutlinedButton(onClick = onSignOut, modifier = Modifier.weight(1f)) { Text("Desativar telefone") }
             }
         }
         if (state.signedIn && !notificationsAllowed) item {
@@ -204,7 +226,7 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
         }
         item { SectionHeading("Alertas ativos") }
         if (state.alerts.isEmpty()) item {
-            Text(if (snapshot == null) "Nenhum dado consultado. Faça login após a configuração." else "Nenhum limite excedido.", color = MutedText, style = MaterialTheme.typography.bodySmall)
+            Text(if (snapshot == null) "Aguardando ativação e conexão com o servidor." else "Nenhum limite excedido.", color = MutedText, style = MaterialTheme.typography.bodySmall)
         }
         items(state.alerts, key = { "alert-${it.id}" }) { alert ->
             OutlinePanel(alert = true) {
@@ -296,7 +318,7 @@ private fun RecordContent(title: String, records: List<OperationalRecord>, state
 private fun EmptyOperationalList(state: OperationalUiState, emptyMessage: String) {
     OutlinePanel {
         Text(if (state.snapshot == null) "Aguardando dados" else emptyMessage, color = MutedText, fontWeight = FontWeight.SemiBold)
-        if (state.snapshot == null) Text("A consulta só será feita após configuração e login autorizado. Nenhum dado fictício foi incluído.", style = MaterialTheme.typography.bodySmall, color = MutedText)
+        if (state.snapshot == null) Text("Os dados serão consultados após ativar este telefone e conectar ao servidor.", style = MaterialTheme.typography.bodySmall, color = MutedText)
     }
 }
 
