@@ -9,6 +9,7 @@ import com.grm.rotagrm.domain.model.OperationalSnapshot
 import com.grm.rotagrm.domain.repository.OperationalRepository
 import com.grm.rotagrm.settings.MonitoringSettings
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
@@ -34,6 +35,10 @@ class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? =
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
 
     override suspend fun fetchSnapshot(): OperationalSnapshot {
+        return withTimeoutOrNull(90_000L) { fetchWithRetries() } ?: throw TemporaryServiceException()
+    }
+
+    private suspend fun fetchWithRetries(): OperationalSnapshot {
         for (attempt in 0..2) {
             try { return decodeSnapshot(request("/v1/snapshot"))
             } catch (error: SessionAccessException) { throw error
@@ -121,7 +126,10 @@ class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? =
                 stale = root.optBoolean("stale", false), sourceAvailable = root.optBoolean("sourceAvailable", true),
                 persistenceAvailable = root.optBoolean("persistenceAvailable", true),
                 lastAttemptAt = root.optString("lastAttemptAt").takeIf { it.isNotBlank() && it != "null" },
-                refreshIntervalSeconds = root.optInt("refreshIntervalSeconds", 60).coerceIn(30, 3600), cacheJson = body)
+                refreshIntervalSeconds = root.optInt("refreshIntervalSeconds", 60).coerceIn(30, 3600), cacheJson = body,
+                serverTimeEpochMillis = root.optString("serverTime").takeIf { it.isNotBlank() }?.let {
+                    runCatching { Instant.parse(it).toEpochMilli() }.getOrNull()
+                })
         }
 
         private fun JSONObject.toRecord(): OperationalRecord {
@@ -130,7 +138,8 @@ class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? =
                 if (isNull("startEpochMillis")) null else getLong("startEpochMillis"),
                 getLong("durationSeconds").coerceAtLeast(0L), optString("operator"), optString("location"),
                 optString("equipmentType"), optString("kpiCategory"), durationFromReport = true,
-                startConfirmed = optBoolean("startConfirmed", false))
+                startConfirmed = optBoolean("startConfirmed", false),
+                durationMeasuredAtEpochMillis = if (isNull("durationMeasuredAtEpochMillis")) null else getLong("durationMeasuredAtEpochMillis"))
         }
     }
 }

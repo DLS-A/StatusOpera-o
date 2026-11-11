@@ -1,4 +1,12 @@
-# Status Operacional — build de teste 0.6.1-test
+# Status Operacional — build de teste 0.6.2-test
+
+## Ajustes0.6.2 (em validação)
+- versionCode8. Ajustes com senha local; outras abas livres. Operação/parado por statusType, somente Operational Downtime=parado.
+- Autor completo/Apontado via Web, local quando preenchido; Início mantém filtro REFEIÇÃO/AG MANUTENÇÃO e mostra tempo total em aberto.
+- Duração medida no corte GRM, relógio do servidor + avanço monotônico; cache antigo/offline não avança.
+- Recuperação após reinício usa histórico privado persistido sem converter fuso novamente; cadência de coleta desconta tempo de execução. Espera total do APK limitada90s.
+- Encerramento/startup do servidor observado11/11 09:16/09:22 São Paulo, seguido de recuperação. Plano free mantido; disponibilidade contínua não garantida.
+- Testes/build/deploy desta versão ainda pendentes neste registro. Sem teste físico ou emulador.
 
 ## Correção do servidor — horários e histórico
 - Comparação com três imagens do usuário confirmou datas numéricas GRM como relógio local codificado em UTC. Conversão corrigida apenas no adaptador, tanto início quanto fim; duração não recebe deslocamento artificial.

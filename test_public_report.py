@@ -9,6 +9,65 @@ from backend.app.report_contract import current_records, maintenance_reason, pau
 from functions import normalizar_apontamento
 
 class PublicReportTests(TestCase):
+    def test_classification_uses_type_not_ambiguous_kpi_and_only_operational_downtime_is_stopped(self):
+        from backend.app.grm_client import normalize_grm_report_record
+        now=datetime.now(timezone.utc)
+        cases=[('Operating','HAO','FILA NO CARREGAMENTO','operating'),
+            ('Operational Downtime','HAO','AG PARE/SIGA','stopped'),
+            ('Operational Downtime','HMC','AG MANUTENCAO','stopped'),
+            ('Unplanned  maintenance','HMC','EXEC MANUT CORRETIVA','maintenance'),
+            ('Planned  maintenance','MPS','EXEC MANUT PREVENTIVA','maintenance'),
+            ('','HOI','DESCONHECIDO','unknown')]
+        records=[normalize_grm_report_record(dict(id=i,equipmentTag='EQ-'+str(i),reasonName=reason,
+            statusType=status,kpiCategory=kpi,startDate=(now-timedelta(hours=1)).isoformat(),endDate=now.isoformat()))
+            for i,(status,kpi,reason,want) in enumerate(cases)]
+        equipment=build_snapshot(records)['equipment']
+        self.assertEqual([x[3] for x in cases],[e['operationalState'] for e in equipment])
+        self.assertEqual(2,sum(e['operationalState']=='stopped' for e in equipment))
+        self.assertEqual([x[0] for x in cases],[e['current']['statusType'] for e in equipment])
+
+    def test_full_pointing_author_preserved_and_missing_author_has_web_fallback(self):
+        from backend.app.grm_client import normalize_grm_report_record
+        base=dict(id='r',equipmentTag='EQ',reasonName='REFEICAO',startDate='2026-11-11T09:00:00-03:00',endDate=None)
+        name='OPERADOR FICTICIO NOME COMPLETO'
+        row=normalize_grm_report_record(dict(base,operator='  '+name+' ',location='  LOCAL TESTE  '))
+        self.assertEqual(name,row['operator']);self.assertEqual('LOCAL TESTE',row['location'])
+        for value in (None,'',' ','-','null','NONE','Não informado','SEM OPERADOR'):
+            self.assertEqual('Apontado via Web',normalize_grm_report_record(dict(base,operator=value))['operator'])
+        self.assertEqual('',normalize_grm_report_record(base)['location'])
+
+    def test_measurement_timestamp_matches_converted_source_end_and_full_elapsed(self):
+        from backend.app.grm_client import normalize_grm_report_record
+        from backend.app.snapshot_service import public_record
+        start=datetime(2026,11,11,8,tzinfo=timezone.utc)
+        raw=dict(id='r',equipmentTag='EQ',reasonName='REFEICAO',startDate=int(start.timestamp()*1000),
+            endDate=int((start+timedelta(hours=2,minutes=17)).timestamp()*1000))
+        item=public_record(normalize_grm_report_record(raw))
+        self.assertEqual(raw['endDate']+10_800_000,item['durationMeasuredAtEpochMillis'])
+        self.assertEqual(item['endDate'],item['durationMeasuredAtEpochMillis'])
+        self.assertEqual(8220,item['durationSeconds'])
+        self.assertEqual(item['durationSeconds'],int((item['endDate']-item['startEpochMillis'])/1000))
+
+    def test_restart_restores_compact_history_without_second_timezone_shift_or_full_bootstrap(self):
+        from backend.app.grm_client import GrmClient
+        from backend.app.settings import Settings
+        from backend.app.snapshot_service import SnapshotService
+        now=datetime.now(timezone.utc);opening=now-timedelta(days=48);shift=now-timedelta(hours=2)
+        before=self.row('prior','EH','OPERANDO',opening-timedelta(minutes=1),opening)
+        first=self.row('m','EH','EXEC MANUT CORRETIVA',opening,shift)
+        last=self.row('m','EH','EXEC MANUT CORRETIVA',shift,now)
+        other=self.row('o','EQ','OPERANDO',shift,now)
+        payload=build_snapshot([before,first,last,other])
+        client=GrmClient(Settings('https://example.invalid','mock','unused'))
+        store=Mock();store.latest.return_value=(payload,dict(attempted_at=now,failed=False))
+        service=SnapshotService(client.settings,store,client);service.restore()
+        with patch.object(client,'_fetch_window',return_value=[last,other]) as fetch:
+            result=build_snapshot(client.fetch())
+        self.assertEqual([(1,)],[c.args for c in fetch.call_args_list])
+        item=result['maintenance'][0]
+        self.assertEqual(int(opening.timestamp()*1000),item['startEpochMillis'])
+        self.assertTrue(item['startConfirmed'])
+
     def row(self, id, tag, reason, start, end):
         return normalizar_apontamento(dict(id=id,equipmentTag=tag,reasonName=reason,
             startDate=start.isoformat(),endDate=end.isoformat() if end else None))

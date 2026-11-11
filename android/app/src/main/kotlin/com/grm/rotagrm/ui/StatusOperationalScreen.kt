@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grm.rotagrm.BuildConfig
@@ -27,6 +32,10 @@ import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.equipmentTabRecords
 import com.grm.rotagrm.domain.model.homeAlerts
 import com.grm.rotagrm.domain.model.isAwaitingMaintenanceStatus
+import com.grm.rotagrm.domain.model.alertPointing
+import com.grm.rotagrm.domain.model.operatorLabel
+import com.grm.rotagrm.domain.model.pointingLocation
+import com.grm.rotagrm.domain.model.settingsPasswordAccepted
 import com.grm.rotagrm.settings.DEFAULT_PAUSE_STATUS
 import com.grm.rotagrm.settings.MEAL_STATUS
 import com.grm.rotagrm.settings.configurableStatus
@@ -113,7 +122,9 @@ fun OperationalScreen(
                     OperationalTab.EQUIPMENT -> EquipmentContent(equipmentTabRecords(visible.snapshot?.equipment.orEmpty()), visible)
                     OperationalTab.PAUSES -> RecordContent("Pausas ergonômicas", visible.snapshot?.pauses.orEmpty(), visible, R.drawable.ic_pause)
                     OperationalTab.MAINTENANCE -> RecordContent("Manutenções abertas", visible.snapshot?.maintenance.orEmpty(), visible, R.drawable.ic_maintenance)
-                    OperationalTab.SETTINGS -> PreferencesContent(visible, notificationsAllowed, onRequestNotifications, onRefreshInterval, onStatusLimit, onStatusAlerts, onRepeatMinutes, onSound, onVisual, onRestoreSettings, monitoringStatus, monitoringRunning, onStartMonitoring, onPauseMonitoring, onNotificationSettings, onTestSound)
+                    OperationalTab.SETTINGS -> SettingsAccessGate {
+                        PreferencesContent(visible, notificationsAllowed, onRequestNotifications, onRefreshInterval, onStatusLimit, onStatusAlerts, onRepeatMinutes, onSound, onVisual, onRestoreSettings, monitoringStatus, monitoringRunning, onStartMonitoring, onPauseMonitoring, onNotificationSettings, onTestSound)
+                    }
                 }
             }
         }
@@ -150,6 +161,7 @@ private fun MetricPanel(label: String, value: String, icon: Int, modifier: Modif
 @Composable
 private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boolean, onRefresh: () -> Unit, onPermission: () -> Unit) {
     val snapshot = state.snapshot
+    val now = rememberOperationalClock()
     val equipment = snapshot?.equipment.orEmpty()
     val visibleAlerts = homeAlerts(state.alerts)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -172,9 +184,10 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
                 Text(if (snapshot == null) "Aguardando dados autorizados."
                     else "Em operação: ${equipment.count { it.operationalState == "operating" }} · Parados: ${equipment.count { it.operationalState == "stopped" }}", style = MaterialTheme.typography.bodySmall)
                 if (snapshot != null) {
+                    Text("Em manutenção: ${equipment.count { it.operationalState == "maintenance" }}", style = MaterialTheme.typography.bodySmall)
                     Text("Sem classificação confirmada: ${equipment.count { it.operationalState == "unknown" }}", style = MaterialTheme.typography.bodySmall)
                     Text("Com apontamento: ${equipment.count { it.current != null }} · Sem apontamento: ${equipment.count { it.current == null }}", style = MaterialTheme.typography.bodySmall)
-                    Text("Ausência de apontamento não significa equipamento parado. Categorias KPI precisam de confirmação administrativa.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                    Text("Parados: somente Parada Operacional. Operação e manutenção seguem o tipo informado pela API; equipamento sem apontamento não é contado como parado.", style = MaterialTheme.typography.labelSmall, color = MutedText)
                 }
             }
         }
@@ -195,10 +208,15 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
             Text(if (snapshot == null) "Aguardando conexão com o servidor." else "Nenhum alerta ativo.", color = MutedText, style = MaterialTheme.typography.bodySmall)
         }
         items(visibleAlerts, key = { "alert-${it.id}" }) { alert ->
+            val pointing = alertPointing(alert, snapshot)
+            val elapsed = pointing?.elapsedSeconds(snapshot, confirmedNow(state, now)) ?: alert.elapsedSeconds
             OutlinePanel(alert = true) {
                 Text(alert.equipmentTag, fontWeight = FontWeight.Bold, color = AlertRed)
                 Text(alert.status, style = MaterialTheme.typography.labelMedium)
-                Text(if (isAwaitingMaintenanceStatus(alert.status)) "Aguardando manutenção." else "Excedido em ${clockDuration(alert.exceededSeconds)} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
+                Text("Tempo em aberto: ${clockDuration(elapsed)}", fontWeight = FontWeight.SemiBold, color = BrandBlue, fontSize = 21.sp)
+                if (pointing != null) Text(recordStartLabel(pointing), style = MaterialTheme.typography.bodySmall)
+                if (oldCollection(state, now)) Text("Tempo da última coleta; dados desatualizados.", style = MaterialTheme.typography.labelSmall, color = WarningAmber)
+                Text(if (isAwaitingMaintenanceStatus(alert.status)) "Aguardando manutenção." else "Excedido em ${clockDuration((elapsed - alert.limitSeconds).coerceAtLeast(0L))} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
                 Text("Permanece aqui até a atualização confirmar a mudança do apontamento.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }
@@ -234,8 +252,8 @@ private fun EquipmentContent(equipment: List<EquipmentStatus>, state: Operationa
                 Text(record?.reasonName ?: "Sem apontamento aberto", color = color, style = MaterialTheme.typography.labelMedium)
                 if (record != null) {
                     Text("Duração: ${clockDuration(elapsed)}", fontWeight = FontWeight.SemiBold, color = BrandBlue)
-                    Text("Operador: ${record.operator.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
-                    Text("Local: ${record.location.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
+                    Text("Operador: ${operatorLabel(record.operator)}", style = MaterialTheme.typography.bodySmall)
+                    pointingLocation(record.location)?.let { Text("Local: $it", style = MaterialTheme.typography.bodySmall) }
                     if (selectedTag == item.equipmentTag) {
                         Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
                         Text("Limite: ${limit?.let { "$it min" } ?: "Não configurado"}", style = MaterialTheme.typography.bodySmall)
@@ -270,8 +288,8 @@ private fun RecordContent(title: String, records: List<OperationalRecord>, state
                 HorizontalDivider(Modifier.padding(vertical = 5.dp), color = Color(0xFFEDEDF8))
                 Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
                 if (limit != null) Text("Limite: $limit min", style = MaterialTheme.typography.bodySmall)
-                Text("Operador: ${record.operator.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
-                Text("Local: ${record.location.ifBlank { "Não informado" }}", style = MaterialTheme.typography.bodySmall)
+                Text("Operador: ${operatorLabel(record.operator)}", style = MaterialTheme.typography.bodySmall)
+                pointingLocation(record.location)?.let { Text("Local: $it", style = MaterialTheme.typography.bodySmall) }
                 if (exceeded && limit != null) Text("Limite excedido em ${clockDuration(elapsed - limit * 60L)}", color = AlertRed, style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -284,6 +302,32 @@ private fun EmptyOperationalList(state: OperationalUiState, emptyMessage: String
     OutlinePanel {
         Text(if (state.snapshot == null) "Aguardando dados" else emptyMessage, color = MutedText, fontWeight = FontWeight.SemiBold)
         if (state.snapshot == null) Text("Conecte à internet e toque em Atualizar para consultar os apontamentos.", style = MaterialTheme.typography.bodySmall, color = MutedText)
+    }
+}
+
+@Composable
+private fun SettingsAccessGate(content: @Composable () -> Unit) {
+    var unlocked by remember { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) { unlocked = false; password = ""; error = false }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    if (unlocked) content() else Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeading("Ajustes protegidos")
+        Text("Informe a senha para acessar os ajustes. As outras abas continuam livres.")
+        OutlinedTextField(value = password, onValueChange = { password = it.filter { c -> c in '0'..'9' }.take(5); error = false },
+            label = { Text("Senha") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), isError = error,
+            modifier = Modifier.fillMaxWidth())
+        if (error) Text("Senha incorreta.", color = AlertRed)
+        Button(onClick = { unlocked = settingsPasswordAccepted(password); error = !unlocked; password = "" },
+            enabled = password.length == 5, modifier = Modifier.fillMaxWidth()) { Text("Entrar em Ajustes") }
     }
 }
 
@@ -374,11 +418,10 @@ private fun localCollectionTime(value: String): String = runCatching {
 }.getOrDefault("Horário indisponível")
 private fun oldCollection(state: OperationalUiState, now: Long): Boolean {
     val snapshot = state.snapshot ?: return true
-    val updated = runCatching { Instant.parse(snapshot.updatedAt).toEpochMilli() }.getOrDefault(0L)
-    return snapshot.stale || !state.apiAvailable || now - updated > maxOf(120_000L, snapshot.refreshIntervalSeconds * 2000L)
+    return !state.apiAvailable || !snapshot.isFresh(now)
 }
 private fun confirmedNow(state: OperationalUiState, now: Long): Long =
-    if (oldCollection(state, now)) state.snapshot?.updatedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() } ?: now else now
+    now
 
 @Composable
 private fun CurrentSnapshotBanner(state: OperationalUiState) {

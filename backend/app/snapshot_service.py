@@ -4,11 +4,12 @@ from copy import deepcopy
 from datetime import datetime, timezone
 import logging
 import threading
+import time
 
 from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
                        obter_manutencoes_abertas, obter_manutencoes_atuais,
                        obter_pausas_ergonomicas_abertas)
-from .report_contract import current_records, maintenance_reason, pause_reason, original_start
+from .report_contract import current_records, maintenance_reason, pause_reason, original_start, operational_state
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +20,9 @@ def public_record(item):
             "reasonName": str(item.get("reasonName") or ""), "startDate": item.get("startDate"),
             "startEpochMillis": int(start.timestamp() * 1000) if start else None,
             "startConfirmed": item.get('_start_confirmed', False),
+            "statusType": str(item.get('statusType') or ''),
             "endDate": item.get("endDate"),
+            "durationMeasuredAtEpochMillis": int(item['_fim_dt'].timestamp()*1000) if item.get('_fim_dt') else None,
             "durationSeconds": calcular_duracao_segundos(start, item.get("_fim_dt")),
             **{name: str(item.get(name) or "") for name in
                ("operator", "location", "equipmentType", "kpiCategory")}}
@@ -30,12 +33,7 @@ def build_snapshot(records, settings=None):
     current = {r["equipmentTag"]: r for r in active}
     tags = sorted({str(r["equipmentTag"]) for r in records if r.get("equipmentTag")})
     def state(tag):
-        category = current.get(tag, {}).get("kpiCategory")
-        if settings and category in settings.operating_categories:
-            return "operating"
-        if settings and category in settings.stopped_categories:
-            return "stopped"
-        return "unknown"
+        return operational_state(current.get(tag, {}))
     return {"updatedAt": datetime.now(timezone.utc).isoformat(),
             "equipment": [{"equipmentTag": tag, "operationalState": state(tag), "current": public_record(current[tag]) if tag in current else None} for tag in tags],
             "pauses": [public_record(r) for r in active if pause_reason(r['reasonName'])],
@@ -66,7 +64,10 @@ class SnapshotService:
 
     def restore(self):
         try:
-            self._set(self.store.latest())
+            result = self.store.latest()
+            self._set(result)
+            if result[0] and hasattr(self.client, 'restore_history'):
+                self.client.restore_history(result[0])
         except Exception:
             with self._lock:
                 self._database_available = False
@@ -115,5 +116,7 @@ class SnapshotService:
     async def run(self):
         # A background loop is application functionality, not an agent polling loop.
         while True:
+            started = time.monotonic()
             await asyncio.to_thread(self.refresh)
-            await asyncio.sleep(self.settings.interval)
+            # The poll itself takes time. Do not add another full interval.
+            await asyncio.sleep(max(1.0, self.settings.interval - (time.monotonic() - started)))

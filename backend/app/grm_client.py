@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from functions import normalizar_apontamento, chave_inicio_apontamento
-from .report_contract import current_records, maintenance_reason, record_key, original_start
+from .report_contract import current_records, maintenance_reason, record_key, original_start, normalized_reason
 
 MAX_BYTES = 10 * 1024 * 1024
 TRANSIENT = {408, 429, 500, 502, 503, 504}
@@ -37,7 +37,13 @@ def normalize_grm_report_record(item):
             wall = datetime.fromtimestamp(int(value) / 1000, timezone.utc).replace(tzinfo=None)
             instant = wall.replace(tzinfo=ZoneInfo('America/Sao_Paulo')).astimezone(timezone.utc)
             corrected[field] = int(instant.timestamp() * 1000)
-    return normalizar_apontamento(corrected)
+    record = normalizar_apontamento(corrected)
+    record['statusType'] = str(item.get('statusType') or '').strip()
+    # Keep the full pointing author, not the legacy bot's abbreviated name.
+    operator = str(item.get('operator') or '').strip()
+    record['operator'] = operator if normalized_reason(operator) not in ('', '-', 'NULL', 'NONE', 'NAO INFORMADO', 'SEM OPERADOR') else 'Apontado via Web'
+    record['location'] = str(item.get('location') or '').strip()
+    return record
 
 
 class GrmClient:
@@ -48,6 +54,24 @@ class GrmClient:
         self._history = []
         self._history_attempt = 0.0
         self._failed_history_keys = set()
+
+    def restore_history(self, payload):
+        """Warm the compact history from private persistence after a restart.
+
+        Persisted dates are real UTC instants, already converted at ingestion.
+        Never run the GRM wall-time correction on these a second time.
+        """
+        parts = []
+        for item in payload.get('records', []):
+            record = normalizar_apontamento(item)
+            record['statusType'] = str(item.get('statusType') or '')
+            record['operator'] = str(item.get('operator') or 'Apontado via Web')
+            record['location'] = str(item.get('location') or '')
+            if record.get('_inicio_dt') and record.get('equipmentTag'):
+                parts.append(record)
+        self._history = parts
+        self._history_attempt = 0.0
+        self._failed_history_keys.clear()
 
     def fetch(self):
         records = self._fetch_window(1)

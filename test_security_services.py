@@ -136,7 +136,11 @@ class SnapshotTests(unittest.TestCase):
         r=normalizar_apontamento({'id':'mock','equipmentTag':'TEST','reasonName':'ANY','startDate':self.now.isoformat(),'kpiCategory':'SOME'})
         self.assertEqual(build_snapshot([r],self.settings)['equipment'][0]['operationalState'],'unknown')
         settings=Settings('https://example.invalid','mock','unused',operating_categories=frozenset({'SOME'}))
+        self.assertEqual(build_snapshot([r],settings)['equipment'][0]['operationalState'],'unknown')
+        r['statusType']='Operating'
         self.assertEqual(build_snapshot([r],settings)['equipment'][0]['operationalState'],'operating')
+        r['statusType']='Operational Downtime'
+        self.assertEqual(build_snapshot([r],settings)['equipment'][0]['operationalState'],'stopped')
     def test_empty_snapshot_can_be_confirmed(self):
         self.assertEqual(build_snapshot([])['equipment'],[])
 

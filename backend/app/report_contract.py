@@ -20,6 +20,17 @@ def maintenance_reason(value): return normalized_reason(value) in MAINTENANCE
 
 def pause_reason(value): return normalized_reason(value) == 'PAUSA ERGONOMICA'
 
+def operational_state(row):
+    """Classify by GRM statusType, not ambiguous KPI codes such as HAO/HMC."""
+    status = normalized_reason(row.get('statusType', ''))
+    if status in ('OPERATING', 'OPERACAO'):
+        return 'operating'
+    if status in ('OPERATIONAL DOWNTIME', 'PARADA OPERACIONAL'):
+        return 'stopped'
+    if status in ('PLANNED MAINTENANCE', 'UNPLANNED MAINTENANCE', 'MANUTENCAO PREVENTIVA', 'MANUTENCAO CORRETIVA'):
+        return 'maintenance'
+    return 'unknown'
+
 def record_key(row):
     return (str(row['id']), row['equipmentTag'], normalized_reason(row['reasonName']))
 

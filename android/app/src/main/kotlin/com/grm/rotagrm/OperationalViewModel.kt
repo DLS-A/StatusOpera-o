@@ -178,9 +178,8 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun evaluateAlerts(snapshot: OperationalSnapshot, settings: MonitoringSettings) {
-        val updated = runCatching { Instant.parse(snapshot.updatedAt).toEpochMilli() }.getOrDefault(0L)
-        if (snapshot.stale || !snapshot.sourceAvailable || !snapshot.persistenceAvailable || !_state.value.apiAvailable || System.currentTimeMillis() - updated > maxOf(120_000L, snapshot.refreshIntervalSeconds * 2000L)) return
         val now = System.currentTimeMillis()
+        if (!_state.value.apiAvailable || !snapshot.isFresh(now)) return
         val thresholdAlerts = AlertEvaluator.activeAlerts(snapshot, settings, now)
         val maintenanceAlerts = snapshot.maintenanceAlerts
             .map { record ->
