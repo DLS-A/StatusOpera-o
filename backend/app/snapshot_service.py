@@ -4,7 +4,6 @@ from copy import deepcopy
 from datetime import datetime, timezone
 import logging
 import threading
-import time
 
 from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
                        obter_manutencoes_abertas, obter_manutencoes_atuais,
@@ -116,7 +115,11 @@ class SnapshotService:
     async def run(self):
         # A background loop is application functionality, not an agent polling loop.
         while True:
-            started = time.monotonic()
             await asyncio.to_thread(self.refresh)
             # The poll itself takes time. Do not add another full interval.
-            await asyncio.sleep(max(1.0, self.settings.interval - (time.monotonic() - started)))
+            # Anchor to the database attempt, with a small boundary margin so
+            # interval throttling cannot skip every other refresh.
+            with self._lock:
+                attempted = self._attempt
+            elapsed = (self.clock() - attempted).total_seconds() if attempted else 0
+            await asyncio.sleep(max(1.0, self.settings.interval + 1 - elapsed))

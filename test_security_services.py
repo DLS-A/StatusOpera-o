@@ -111,6 +111,16 @@ class GrmTests(unittest.TestCase):
         self.assertNotIn('mock-secret',str(ctx.exception));self.assertEqual(self.session.get.call_count,3)
 
 class SnapshotTests(unittest.TestCase):
+    def test_poll_cadence_uses_attempt_not_full_interval_after_work(self):
+        import asyncio
+        from unittest.mock import AsyncMock
+        self.service.restore()
+        self.now += timedelta(seconds=18)
+        with patch.object(self.service,'refresh'), patch('backend.app.snapshot_service.asyncio.sleep',
+                new=AsyncMock(side_effect=asyncio.CancelledError)) as sleep:
+            with self.assertRaises(asyncio.CancelledError):asyncio.run(self.service.run())
+        sleep.assert_awaited_once_with(43.0)
+
     def setUp(self):
         self.now=datetime.now(timezone.utc)
         self.settings=Settings('https://example.invalid','mock','unused')
