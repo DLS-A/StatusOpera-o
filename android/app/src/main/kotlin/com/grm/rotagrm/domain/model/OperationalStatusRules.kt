@@ -18,7 +18,8 @@ fun homeAlerts(alerts: List<OperationalAlert>, snapshot: OperationalSnapshot? = 
         isReleasedMaintenanceStatus(it.status) || normalizedOperationalStatus(it.status) == "REFEICAO" }
     val released = snapshot?.equipment.orEmpty().mapNotNull { it.current }
         .filter { it.id.isNotBlank() && isReleasedMaintenanceStatus(it.reasonName) }
-        .map { OperationalAlert(it.id, it.equipmentTag, it.reasonName, it.elapsedSeconds(snapshot, now), 0L, 0L, 0L) }
+        .map { OperationalAlert(id = it.id, equipmentTag = it.equipmentTag, status = it.reasonName,
+            elapsedSeconds = it.elapsedSeconds(snapshot, now), limitSeconds = 0L, exceededSeconds = 0L) }
     return (visible + released).distinctBy { it.id }
 }
 

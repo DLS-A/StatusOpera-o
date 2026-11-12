@@ -5,6 +5,7 @@
 - Projeção homeAlerts inclui cartões atuais sem depender de limites/AlertEvaluator ou eventos de manutenção. Mesmo formato AG; descrição Liberado pela manutenção, tempo total e abertura. Contagem usa lista completa e sem duplicatas.
 - Som/monitor/ViewModel/backend/aba Manutenções preservados. Registros liberados permanecem em Equipamentos e desaparecem do Início após mudança confirmada. Cache/stale sinalizado, sem novo tempo inventado.
 - Versão0.6.3/code9. Três novos testes escritos; publicar branch isolada e compilar via Actions; pendências do backend0.6.2 não resolvidas por esta alteração visual.
+- Primeiro build43240646604 falhou no type-check: argumentoLongextraemOperationalAlert. Corrigido com argumentos nomeados; novo build requerido.88Python OK. Snapshot público12/11 14:46Z agorafreshcomcontratonovo;classificações e durações conferidas;CB-301 LIBERADO atual. Implantação anterior chegou ao payload, mas commitRender não inspecionado.
 
 ## Ajustes 0.6.2 — 11/11/2026, em validação
 - Validação final local:88testes Python/PostgreSQL OK;32JUnit Android OK, Actions43023217385 SUCCESS, artefato13856047009. APK0.6.2/code8 SHA256a1e330584151048b5de23a46715bd92778e1681c76684b9694f7245fc29c6862,14.817.635bytes;v2 validada localmente, certificado diferente0.6.1.
