@@ -1,4 +1,4 @@
-name: Status Operacional - APK 0.6.2 Ajustes e recuperacao
+name: Status Operacional - APK 0.6.3 Liberados da manutencao
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           mkdir -p delivery
           git rev-parse HEAD > delivery/SOURCE_COMMIT.txt
           grep '^rotaApiBaseUrl=https://status-operacional-api.onrender.com$' android/rota-public.properties
-          echo 'APK debug0.6.2; Ajustes protegidos; tipo operacional; autor/local; tempo aberto; recuperacao e relogio servidor.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'APK debug0.6.3; Inicio inclui todos os LIBERADO PELA MANUT atuais; somente apresentacao; som e manutencoes preservados.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Preparar Gradle e SDK Android
         shell: bash
@@ -62,7 +62,7 @@ jobs:
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
-          cp "$APK" delivery/Status_Operacional_0.6.2-test.apk
+          cp "$APK" delivery/Status_Operacional_0.6.3-test.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" > delivery/assinatura-apk.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > delivery/identificacao-apk.txt
           grep "name='com.grm.rotagrm'" delivery/identificacao-apk.txt
@@ -79,10 +79,10 @@ jobs:
               failures += int(root.attrib.get('failures', 0))
               errors += int(root.attrib.get('errors', 0))
               skipped += int(root.attrib.get('skipped', 0))
-          assert tests >= 32 and failures == 0 and errors == 0 and skipped == 0
+          assert tests >= 35 and failures == 0 and errors == 0 and skipped == 0
           Path('delivery/testes-android.txt').write_text(f'{tests} testes JUnit aprovados; falhas={failures}; erros={errors}; ignorados={skipped}\n')
           PY
-          (cd delivery && sha256sum Status_Operacional_0.6.2-test.apk > APK_SHA256.txt)
+          (cd delivery && sha256sum Status_Operacional_0.6.3-test.apk > APK_SHA256.txt)
           cat delivery/testes-android.txt >> "$GITHUB_STEP_SUMMARY"
           cat delivery/APK_SHA256.txt >> "$GITHUB_STEP_SUMMARY"
 

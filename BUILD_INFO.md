@@ -1,4 +1,9 @@
-# Status Operacional — build de teste 0.6.2-test
+# Status Operacional — build de teste 0.6.3-test
+
+## Início: LIBERADO PELA MANUT
+- Inclui todos os apontamentos atuais LIBERADO PELA MANUT, no mesmo cartão de AG MANUTENCAO: motivo, tempo em aberto, início e encerramento após mudança confirmada.
+- Inclusão somente na apresentação, sem limite, excedido falso, novo som ou alteração da aba Manutenções; REFEIÇÃO e AG continuam.
+- Três novas regressões JUnit; build externo pendente. Backend não alterado neste pedido; implantação anterior ainda não confirmada.
 
 ## Ajustes0.6.2 (em validação)
 - versionCode8. Ajustes com senha local; outras abas livres. Operação/parado por statusType, somente Operational Downtime=parado.

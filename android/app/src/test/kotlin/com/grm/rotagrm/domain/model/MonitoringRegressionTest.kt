@@ -97,4 +97,47 @@ class MonitoringRegressionTest {
         assertFalse(isAwaitingMaintenanceStatus("LIBERADO PELA MANUT"))
         assertTrue(homeAlerts(emptyList()).isEmpty())
     }
+
+    @Test fun allCurrentlyReleasedEquipmentAppearWithoutLimitOrMonitorEvents() {
+        val released = listOf("LIBERADO PELA MANUT", "  liberado   pela   manut  ").mapIndexed { i, reason ->
+            EquipmentStatus("CB-$i", record("released-$i", reason).copy(equipmentTag = "CB-$i")) }
+        val closed = record("closed", "LIBERADO PELA MANUT")
+        val data = snapshot(record("operating", "OPERANDO")).copy(equipment = released +
+            listOf(EquipmentStatus("CB-9", record("operating", "OPERANDO")), EquipmentStatus("CB-10", null)),
+            maintenance = listOf(closed))
+        val visible = homeAlerts(emptyList(), data, now)
+        assertEquals(listOf("released-0", "released-1"), visible.map { it.id })
+        assertEquals(listOf(960L, 960L), visible.map { it.elapsedSeconds })
+        assertTrue(visible.all { it.limitSeconds == 0L && !it.maintenanceEvent })
+        assertTrue(AlertEvaluator.activeAlerts(data, MonitoringSettings(), now).isEmpty())
+        assertEquals(listOf(closed), data.maintenance)
+        assertEquals(2, equipmentTabRecords(released).size)
+        assertFalse(isMaintenanceStatus("LIBERADO PELA MANUT"))
+    }
+
+    @Test fun releasedCardUsesAwaitingLayoutWithoutFalseLimitExceededText() {
+        val row = record("released", "LIBERADO PELA MANUT")
+        val data = snapshot(row)
+        val generated = homeAlerts(emptyList(), data, now).single()
+        assertEquals(row, alertPointing(generated, data))
+        assertEquals("Liberado pela manutenção.", homeAlertDescription(generated, generated.elapsedSeconds))
+        val waiting = generated.copy(status = "AG MANUTENCAO")
+        assertEquals("Aguardando manutenção.", homeAlertDescription(waiting, 960L))
+        assertEquals(1, homeAlerts(listOf(generated), data, now).size)
+        assertTrue(homeAlerts(emptyList(), snapshot(record("new", "OPERANDO")), now).isEmpty())
+        assertTrue(homeAlerts(emptyList(), data.copy(equipment = emptyList()), now).isEmpty())
+    }
+
+    @Test fun releasedDisplayPreservesMealWaitingAndStaleApiDurationWithoutNewSounds() {
+        val existing = listOf(OperationalAlert("maintenance:m", "CB-1", "AG MANUTENCAO", 960L, 0L, 0L, true),
+            OperationalAlert("meal", "CB-2", "REFEICAO", 960L, 900L, 60L),
+            OperationalAlert("pause", "CB-3", DEFAULT_PAUSE_STATUS, 960L, 900L, 60L))
+        val original = existing.toList()
+        val data = snapshot(record("released", "LIBERADO PELA MANUT")).copy(stale = true)
+        val visible = homeAlerts(existing, data, now + 3_600_000L)
+        assertEquals(listOf("maintenance:m", "meal", "released"), visible.map { it.id })
+        assertEquals(960L, visible.last().elapsedSeconds)
+        assertEquals(original, existing)
+        assertEquals("Excedido em 00:01:00 · limite 15 min", homeAlertDescription(existing[1], 960L))
+    }
 }

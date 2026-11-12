@@ -31,7 +31,7 @@ import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.equipmentTabRecords
 import com.grm.rotagrm.domain.model.homeAlerts
-import com.grm.rotagrm.domain.model.isAwaitingMaintenanceStatus
+import com.grm.rotagrm.domain.model.homeAlertDescription
 import com.grm.rotagrm.domain.model.alertPointing
 import com.grm.rotagrm.domain.model.operatorLabel
 import com.grm.rotagrm.domain.model.pointingLocation
@@ -163,7 +163,7 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
     val snapshot = state.snapshot
     val now = rememberOperationalClock()
     val equipment = snapshot?.equipment.orEmpty()
-    val visibleAlerts = homeAlerts(state.alerts)
+    val visibleAlerts = homeAlerts(state.alerts, snapshot, now)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading("Visão geral", if (state.apiAvailable) "Conectado" else if (snapshot != null) "Último dado salvo" else "Sem dados") }
         item {
@@ -216,7 +216,7 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
                 Text("Tempo em aberto: ${clockDuration(elapsed)}", fontWeight = FontWeight.SemiBold, color = BrandBlue, fontSize = 21.sp)
                 if (pointing != null) Text(recordStartLabel(pointing), style = MaterialTheme.typography.bodySmall)
                 if (oldCollection(state, now)) Text("Tempo da última coleta; dados desatualizados.", style = MaterialTheme.typography.labelSmall, color = WarningAmber)
-                Text(if (isAwaitingMaintenanceStatus(alert.status)) "Aguardando manutenção." else "Excedido em ${clockDuration((elapsed - alert.limitSeconds).coerceAtLeast(0L))} · limite ${alert.limitSeconds / 60} min", style = MaterialTheme.typography.bodySmall)
+                Text(homeAlertDescription(alert, elapsed), style = MaterialTheme.typography.bodySmall)
                 Text("Permanece aqui até a atualização confirmar a mudança do apontamento.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }

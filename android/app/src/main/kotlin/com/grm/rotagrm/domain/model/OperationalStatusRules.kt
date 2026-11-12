@@ -9,9 +9,27 @@ fun isMaintenanceStatus(status: String): Boolean = normalizedOperationalStatus(s
 
 fun isAwaitingMaintenanceStatus(status: String): Boolean = normalizedOperationalStatus(status) == "AG MANUTENCAO"
 
-/** Presentation-only filter. Does not change the monitor, notifications or maintenance tab. */
-fun homeAlerts(alerts: List<OperationalAlert>): List<OperationalAlert> =
-    alerts.filter { isAwaitingMaintenanceStatus(it.status) || normalizedOperationalStatus(it.status) == "REFEICAO" }
+fun isReleasedMaintenanceStatus(status: String): Boolean = normalizedOperationalStatus(status) == "LIBERADO PELA MANUT"
+
+/** Presentation only: released equipment is not a maintenance/sound event. */
+fun homeAlerts(alerts: List<OperationalAlert>, snapshot: OperationalSnapshot? = null,
+    now: Long = System.currentTimeMillis()): List<OperationalAlert> {
+    val visible = alerts.filter { isAwaitingMaintenanceStatus(it.status) ||
+        isReleasedMaintenanceStatus(it.status) || normalizedOperationalStatus(it.status) == "REFEICAO" }
+    val released = snapshot?.equipment.orEmpty().mapNotNull { it.current }
+        .filter { it.id.isNotBlank() && isReleasedMaintenanceStatus(it.reasonName) }
+        .map { OperationalAlert(it.id, it.equipmentTag, it.reasonName, it.elapsedSeconds(snapshot, now), 0L, 0L, 0L) }
+    return (visible + released).distinctBy { it.id }
+}
+
+fun homeAlertDescription(alert: OperationalAlert, elapsed: Long): String = when {
+    isAwaitingMaintenanceStatus(alert.status) -> "Aguardando manutenção."
+    isReleasedMaintenanceStatus(alert.status) -> "Liberado pela manutenção."
+    else -> "Excedido em %02d:%02d:%02d · limite %d min".format(
+        (elapsed - alert.limitSeconds).coerceAtLeast(0L) / 3600,
+        (elapsed - alert.limitSeconds).coerceAtLeast(0L) % 3600 / 60,
+        (elapsed - alert.limitSeconds).coerceAtLeast(0L) % 60, alert.limitSeconds / 60)
+}
 
 fun equipmentTabRecords(equipment: List<EquipmentStatus>): List<EquipmentStatus> =
     equipment.filter { !isMaintenanceStatus(it.current?.reasonName.orEmpty()) }

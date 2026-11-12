@@ -1,6 +1,17 @@
 # Status Operacional — execução aprovada
 
+## 0.6.3 — LIBERADO PELA MANUT no Início
+- Nome confirmado pelo usuário. Incluir todos os equipamentos cujo apontamento atual corresponde exatamente ao motivo normalizado.
+- Projeção homeAlerts inclui cartões atuais sem depender de limites/AlertEvaluator ou eventos de manutenção. Mesmo formato AG; descrição Liberado pela manutenção, tempo total e abertura. Contagem usa lista completa e sem duplicatas.
+- Som/monitor/ViewModel/backend/aba Manutenções preservados. Registros liberados permanecem em Equipamentos e desaparecem do Início após mudança confirmada. Cache/stale sinalizado, sem novo tempo inventado.
+- Versão0.6.3/code9. Três novos testes escritos; publicar branch isolada e compilar via Actions; pendências do backend0.6.2 não resolvidas por esta alteração visual.
+
 ## Ajustes 0.6.2 — 11/11/2026, em validação
+- Validação final local:88testes Python/PostgreSQL OK;32JUnit Android OK, Actions43023217385 SUCCESS, artefato13856047009. APK0.6.2/code8 SHA256a1e330584151048b5de23a46715bd92778e1681c76684b9694f7245fc29c6862,14.817.635bytes;v2 validada localmente, certificado diferente0.6.1.
+- Fonte APKd054ea9f24f3fa6b2f654e03124748800ed76002;fonte backendba7fa90f8e61e2efd37bd85a09dec88d3a5ca000 (Android idêntico).32JUnit incluem10novos testes executados;DEX símbolos/textos verificados. main remota preservada.
+- Fonte GRM real12:48:58Z:93atuais,21operating/60stopped/12maintenance;20fallbackWeb,55locais. Todas durações=end-início, medição=endDate, somenteOperationalDowntime=stopped. Bootstrap com histórico persistido2.59s;EH309 abertura24/09confirmada.
+- BLOQUEIO:API administrativaRender(GETservices/env/deploys/owners/logs autenticados) passou a retornarReadTimeout. Um POSTdeploy ba7fa90... tambémReadTimeout:resultado desconhecido, não repetirPOSTseminspecionar. Arquivo062-deploy-post-unverified.json registra isso. Snapshot público12:53:59Z seguefresh,contratonovoaindaausente. NÃO afirmar backendnovoemprodução nemcorreçãofinaldos6itens.
+- EntregaAPKpode serpreliminar comalerta explícitodebackendpendente;instruirRenderManualDeploy→Deploylatestcommitnabranchexistente,semalterarplano/segredos/auth/FCM. Verificardeploy+snapshotnovofrescodepois. Semtesteemaparelho,semgarantiadeuptimefree.
 - Senha local de Ajustes30824 (somente digest no código), bloqueia ao sair da aba/ON_STOP; demais abas livres.
 - Classificação por statusType GRM: Operating=operação, Operational Downtime=parado. HAO/HMC são ambíguos; manutenção planejada/não planejada separada; ausente=desconhecido.
 - Autor completo, fallback Apontado via Web e local apenas preenchido. Início mostra duração total em aberto de REFEIÇÃO e AG MANUTENÇÃO; filtro de apresentação preservado.
