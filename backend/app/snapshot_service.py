@@ -8,7 +8,7 @@ import threading
 from functions import (calcular_duracao_segundos, obter_apontamentos_abertos,
                        obter_manutencoes_abertas, obter_manutencoes_atuais,
                        obter_pausas_ergonomicas_abertas)
-from .report_contract import current_records, maintenance_reason, pause_reason, original_start, operational_state
+from .report_contract import current_records, maintenance_reason, pause_reason, original_start, operational_state, PointingHistory
 
 log = logging.getLogger(__name__)
 
@@ -28,7 +28,8 @@ def public_record(item):
 
 
 def build_snapshot(records, settings=None):
-    active = [original_start(records, r) for r in current_records(records)]
+    index = PointingHistory(records)
+    active = [original_start(records, r, index) for r in current_records(records)]
     current = {r["equipmentTag"]: r for r in active}
     tags = sorted({str(r["equipmentTag"]) for r in records if r.get("equipmentTag")})
     def state(tag):

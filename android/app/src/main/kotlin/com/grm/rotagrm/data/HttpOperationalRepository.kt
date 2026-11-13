@@ -6,6 +6,7 @@ import com.grm.rotagrm.auth.OidcAuthManager
 import com.grm.rotagrm.domain.model.EquipmentStatus
 import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.OperationalSnapshot
+import com.grm.rotagrm.domain.model.RefreshPolicy
 import com.grm.rotagrm.domain.repository.OperationalRepository
 import com.grm.rotagrm.settings.MonitoringSettings
 import kotlinx.coroutines.delay
@@ -31,11 +32,11 @@ class TemporaryServiceException : IOException("Serviço temporariamente indispon
 
 class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? = null) : OperationalRepository {
     private val client = OkHttpClient.Builder().connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS).callTimeout(75, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS).callTimeout(20, TimeUnit.SECONDS)
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false).build()
 
     override suspend fun fetchSnapshot(): OperationalSnapshot {
-        return withTimeoutOrNull(90_000L) { fetchWithRetries() } ?: throw TemporaryServiceException()
+        return withTimeoutOrNull(RefreshPolicy.REQUEST_BUDGET_MILLIS) { fetchWithRetries() } ?: throw TemporaryServiceException()
     }
 
     private suspend fun fetchWithRetries(): OperationalSnapshot {

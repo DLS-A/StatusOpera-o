@@ -1,11 +1,24 @@
 # Status Operacional — execução aprovada
 
+## 0.6.4 — recuperação e desempenho, autonomia autorizada
+- Usuário relata dados desatualizados por muito tempo e quer monitor fora da tela; aparelhoAndroid16, compatibilidadeAndroid8+ preservada. Não contratar serviços nem ativar Firebase nesta etapa.
+- Captura13/11 mostra coleta07:26:31 SãoPaulo; logs confirmam shutdown10:26:54Z. Banco registra intervalo8914s entre tentativas com snapshot válido. Não atribuir causa exata ao encerramento sem evidência adicional; plano Renderfree suspende por inatividade.
+- Perfil local do payload5.419registros:49milhõeschamadas em12s sob profiler. Replay sem profiler de5.432registros,93equipamentos: referência2,0464s versus indexado0,0154s; payload equivalente. É processamento local, não velocidade de rede nem garantia de produção.
+- Índice por apontamento e predecessor exato + cache de normalização limitado2048; conserva corte atual, aberturas, duração e classificação.
+- APK0.6.4/code10: timeouttotal25s, recuperação com backoff5→30s, duração da consulta descontada da cadência, atualização imediata ao reabrir/recuperar redevalidada, mutexcompartilhado. Serviço sticky respeita stopSelf/timeout6h; notificação distingue stale/conexão. WorkManagerpersistente agenda naApplication e trata stalecomo retry, sem exigir permissão de notificação para leitura.
+- Ajustes inclui atalho de bateria/permissões, sem pedir exceção automática. REFEIÇÃO/AG/LIBERADO, senhalocal, demais telas preservados.
+-92testesPython/PostgreSQL OK, quatro novos casos para índice/equivalência/cache; seis novosJUnitde cadência escritos (total41esperado). Buildexterno e deploy ainda pendentes. Sem teste físico/emulador; sem promessa24/7Android/Renderfree.
+
 ## 0.6.3 — LIBERADO PELA MANUT no Início
 - Nome confirmado pelo usuário. Incluir todos os equipamentos cujo apontamento atual corresponde exatamente ao motivo normalizado.
 - Projeção homeAlerts inclui cartões atuais sem depender de limites/AlertEvaluator ou eventos de manutenção. Mesmo formato AG; descrição Liberado pela manutenção, tempo total e abertura. Contagem usa lista completa e sem duplicatas.
 - Som/monitor/ViewModel/backend/aba Manutenções preservados. Registros liberados permanecem em Equipamentos e desaparecem do Início após mudança confirmada. Cache/stale sinalizado, sem novo tempo inventado.
 - Versão0.6.3/code9. Três novos testes escritos; publicar branch isolada e compilar via Actions; pendências do backend0.6.2 não resolvidas por esta alteração visual.
 - Primeiro build43240646604 falhou no type-check: argumentoLongextraemOperationalAlert. Corrigido com argumentos nomeados; novo build requerido.88Python OK. Snapshot público12/11 14:46Z agorafreshcomcontratonovo;classificações e durações conferidas;CB-301 LIBERADO atual. Implantação anterior chegou ao payload, mas commitRender não inspecionado.
+- Resultado final: Actions43241274146 SUCCESS; artefato13956120310; fonte compilada cde85c46a23cb6f47f762281a578b370e30d6bd6.35JUnit aprovados, três novos casos executados;88Python/PostgreSQL OK.
+- APK0.6.3/code9:14.817.631bytes,SHA25654a1f2256651bee4de05d2b22d466d304747cc20d8b9d245060130616a274737. ZIP/digest/identidade/DEX/segredos conhecidos verificados; assinatura v2 conferida localmente, certificado mudou vs0.6.2. Instruções avisam desinstalação somente do teste antigo e perda de ajustes/cache.
+- Backend confirmado:dep-dbq7abg8v5cc73fcj720 LIVE,commit ba7fa90f8e61e2efd37bd85a09dec88d3a5ca000,free/public/FCMfalse; snapshot fresco e duração/classificação corretas. Bloqueio anterior resolvido; não requer novo deploy0.6.3.
+- APK e guia prontos para entrega. Sem teste físico/emulador; sem promessa de uptime ou som contínuo. Evidência privada063-apk-evidence.json e pública verificacao-0.6.3.json.
 
 ## Ajustes 0.6.2 — 11/11/2026, em validação
 - Validação final local:88testes Python/PostgreSQL OK;32JUnit Android OK, Actions43023217385 SUCCESS, artefato13856047009. APK0.6.2/code8 SHA256a1e330584151048b5de23a46715bd92778e1681c76684b9694f7245fc29c6862,14.817.635bytes;v2 validada localmente, certificado diferente0.6.1.

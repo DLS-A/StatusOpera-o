@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from functions import normalizar_apontamento, chave_inicio_apontamento
-from .report_contract import current_records, maintenance_reason, record_key, original_start, normalized_reason
+from .report_contract import current_records, maintenance_reason, record_key, original_start, normalized_reason, PointingHistory
 
 MAX_BYTES = 10 * 1024 * 1024
 TRANSIENT = {408, 429, 500, 502, 503, 504}
@@ -76,10 +76,11 @@ class GrmClient:
     def fetch(self):
         records = self._fetch_window(1)
         active = current_records(records)
+        index = PointingHistory(records)
         keys = {record_key(r) for r in active}
         known = {record_key(r) for r in self._history} - self._failed_history_keys
         missing = {record_key(r) for r in active if record_key(r) not in known
-                   and not original_start(records, r).get('_start_confirmed')}
+                   and not original_start(records, r, index).get('_start_confirmed')}
         now = time.monotonic()
         # Historical bootstrap is bounded and cached, never 7 days every minute.
         # Failure to retrieve history must not erase valid current operation.
@@ -96,8 +97,9 @@ class GrmClient:
                 # Older slices come in separate bounded 7-day queries, rather
                 # than one unbounded download. Stop once openings are confirmed.
                 for end_days in range(7, MAX_HISTORY_DAYS, 7):
+                    history_index = PointingHistory(self._history + records)
                     unresolved = [r for r in active if record_key(r) in missing
-                        and not original_start(self._history + records, r).get('_start_confirmed')]
+                        and not original_start(self._history + records, r, history_index).get('_start_confirmed')]
                     if not unresolved:
                         break
                     self._history = self._relevant_history(self._history + self._history_window(end_days + 7, end_days) + records, keys)

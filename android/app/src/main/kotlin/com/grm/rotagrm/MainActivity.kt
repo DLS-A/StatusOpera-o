@@ -3,6 +3,7 @@ package com.grm.rotagrm
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,7 @@ import com.grm.rotagrm.notifications.OperationalNotifications
 import com.grm.rotagrm.notifications.OperationalMonitoringService
 import com.grm.rotagrm.notifications.PushRegistrationWorker
 import com.grm.rotagrm.settings.MonitoringSettingsRepository
+import com.grm.rotagrm.domain.model.RefreshPolicy
 import com.grm.rotagrm.ui.OperationalScreen
 import com.grm.rotagrm.ui.StatusOperacionalTheme
 import kotlinx.coroutines.delay
@@ -72,9 +74,18 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                // Reopening the screen must not wait for a sleeping service loop.
+                var firstPass = true
+                var failures = 0
                 while (true) {
-                    if (!OperationalMonitoringService.isRunning.value) viewModel.refresh()
-                    delay(settings.settings.first().refreshIntervalSeconds * 1000L)
+                    val started = SystemClock.elapsedRealtime()
+                    if (firstPass || !OperationalMonitoringService.isRunning.value) viewModel.refresh()
+                    firstPass = false
+                    val state = viewModel.state.value
+                    val fresh = state.apiAvailable && state.snapshot?.isFresh(System.currentTimeMillis()) == true
+                    failures = if (fresh) 0 else failures + 1
+                    delay(RefreshPolicy.delayMillis(settings.settings.first().refreshIntervalSeconds,
+                        SystemClock.elapsedRealtime() - started, fresh, failures))
                 }
             }
         }

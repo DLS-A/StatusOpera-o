@@ -18,13 +18,15 @@ import java.util.concurrent.TimeUnit
  * WorkManager owns reboot/process survival and scheduling; never exact alarms. */
 class OperationalRefreshWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
-        if (!OperationalMonitoringService.enabled(applicationContext) || !OperationalNotifications.hasPermission(applicationContext)) return Result.success()
+        if (!OperationalMonitoringService.enabled(applicationContext)) return Result.success()
         if (OperationalMonitoringService.isRunning.value) return Result.success()
         return withContext(Dispatchers.Main.immediate) {
             val monitor = (applicationContext as OperationalApplication).monitor
             monitor.state.first { !it.loading }
             monitor.refresh()
-            if (monitor.state.value.apiAvailable) Result.success() else Result.retry()
+            val state = monitor.state.value
+            // HTTP 200 with an old GRM snapshot is not a successful refresh.
+            if (state.apiAvailable && state.snapshot?.isFresh(System.currentTimeMillis()) == true) Result.success() else Result.retry()
         }
     }
 

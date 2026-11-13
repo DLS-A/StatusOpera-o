@@ -1,5 +1,8 @@
 package com.grm.rotagrm.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -334,6 +338,7 @@ private fun SettingsAccessGate(content: @Composable () -> Unit) {
 @Composable
 private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPermission: () -> Unit, onRefresh: (Int) -> Unit, onLimit: (String, Int) -> Unit, onAlerts: (String, Boolean) -> Unit, onRepeat: (Int) -> Unit, onSound: (Boolean) -> Unit, onVisual: (Boolean) -> Unit, onRestore: () -> Unit, monitoringStatus: String, monitoringRunning: Boolean, onStart: () -> Unit, onPause: () -> Unit, onNotificationSettings: () -> Unit, onTestSound: () -> Unit) {
     val settings = state.settings
+    val context = LocalContext.current
     val statuses = listOf(DEFAULT_PAUSE_STATUS, MEAL_STATUS)
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading("Monitoramento") }
@@ -369,6 +374,11 @@ private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPe
                 Text(monitoringStatus, color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
                 Text("Sem Firebase. Monitor contínuo com notificação fixa; no Android 15+ há limite de 6h em segundo plano. Apoio periódico: mínimo 15 min, sujeito a atrasos. Reabra o app para retomar o monitor.", style = MaterialTheme.typography.labelSmall, color = MutedText)
                 Text("Internet, servidor disponível, volume e canal com som são necessários. Não perturbe, economia de bateria e Forçar parada podem impedir alertas.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                Text("Nas configurações do aplicativo, permita uso de bateria em segundo plano/Sem restrições. Isso ajuda, mas não remove os limites do Android nem a suspensão do servidor gratuito.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                TextButton(onClick = {
+                    runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:${context.packageName}"))) }
+                }) { Text("Bateria e permissões no Android") }
                 if (monitoringRunning) TextButton(onClick = onPause) { Text("Pausar monitor em segundo plano") }
                 else TextButton(onClick = if (allowed) onStart else onPermission) { Text("Iniciar monitor em segundo plano") }
             }

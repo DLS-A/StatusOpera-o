@@ -10,8 +10,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import com.grm.rotagrm.MainActivity
 import com.grm.rotagrm.OperationalApplication
+import com.grm.rotagrm.domain.model.RefreshPolicy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,13 +55,26 @@ class OperationalMonitoringService : Service() {
         OperationalRefreshWorker.schedule(this)
         if (loop == null) loop = scope.launch {
             val monitor = (application as OperationalApplication).monitor
+            var failures = 0
             while (true) {
+                val started = SystemClock.elapsedRealtime()
                 monitor.refresh()
-                delay(monitor.state.value.settings.refreshIntervalSeconds * 1000L)
+                val state = monitor.state.value
+                val fresh = state.apiAvailable && state.snapshot?.isFresh(System.currentTimeMillis()) == true
+                failures = if (fresh) 0 else failures + 1
+                val message = if (fresh) "Monitor ativo · dados atualizados"
+                    else if (state.apiAvailable) "Monitor ativo · aguardando nova coleta GRM"
+                    else "Monitor ativo · reconectando ao servidor"
+                status.value = message
+                // Revoking notifications must not silently kill the refresh loop.
+                runCatching { getSystemService(NotificationManager::class.java).notify(ID, monitoringNotification(message)) }
+                delay(RefreshPolicy.delayMillis(state.settings.refreshIntervalSeconds,
+                    SystemClock.elapsedRealtime() - started, fresh, failures))
             }
         }
-        // Never automatically restart a dataSync FGS from background after timeout.
-        return START_NOT_STICKY
+        // Android may recreate an interrupted sticky service. onTimeout calls
+        // stopSelf, so exhausting the dataSync budget does NOT schedule a restart.
+        return START_STICKY
     }
 
     override fun onTimeout(startId: Int, fgsType: Int) {
@@ -71,13 +86,13 @@ class OperationalMonitoringService : Service() {
     override fun onDestroy() {
         running.value = false
         if (!enabled(this)) status.value = "Monitor em segundo plano pausado"
-        else if (status.value == "Monitor em segundo plano ativo") status.value = "Verificação periódica de apoio; reabra para retomar o monitor."
+        else if (!status.value.startsWith("Limite do Android")) status.value = "Verificação periódica de apoio; reabra para retomar o monitor."
         scope.cancel()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 
-    private fun monitoringNotification(): Notification {
+    private fun monitoringNotification(message: String = "Consultando apontamentos mesmo fora da tela. Internet necessária."): Notification {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, "Monitor em segundo plano", NotificationManager.IMPORTANCE_LOW).apply {
             setSound(null, null)
@@ -88,7 +103,7 @@ class OperationalMonitoringService : Service() {
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .setContentTitle("Status Operacional — monitor ativo")
-            .setContentText("Consultando apontamentos mesmo fora da tela. Internet necessária.")
+            .setContentText(message)
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .addAction(Notification.Action.Builder(null, "Pausar monitor", stop).build())
             .build()

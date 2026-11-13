@@ -1,9 +1,18 @@
-# Status Operacional — build de teste 0.6.3-test
+# Status Operacional — build de teste 0.6.4-test
+
+## Recuperação e desempenho0.6.4 (em validação)
+- Android8+ preservado. Recuperação ao reabrir e voltar rede validada, timeouttotal25s, backoff5–30s e cadência que desconta duração da consulta. Serviço e apoio periódico continuam sujeitos ao Android; não promete execução24h.
+- Indexação do histórico por ID/tag/motivo e predecessor exato reduz trabalho repetitivo sem modificar datas/status. Replay local5.432registros:2,0464s→0,0154s para construir snapshot, payload equivalente; não é medição de rede.
+-92Python/PostgreSQL aprovados;41JUnit esperados. Compilação/deploy ainda pendentes. Captura13/11 e registros confirmaram interrupção do servidor às07:26 e lacuna de8914s; causa exata não comprovada. Hospedagemfree não oferece continuidade garantida.
+- Atalho Ajustes para bateria/permissões. Leitura periódica não exige permissão de notificações; usuário pode pausar monitor. Sem Firebase ou contratação nesta alteração; sem teste físico/emulador.
 
 ## Início: LIBERADO PELA MANUT
 - Inclui todos os apontamentos atuais LIBERADO PELA MANUT, no mesmo cartão de AG MANUTENCAO: motivo, tempo em aberto, início e encerramento após mudança confirmada.
 - Inclusão somente na apresentação, sem limite, excedido falso, novo som ou alteração da aba Manutenções; REFEIÇÃO e AG continuam.
-- Três novas regressões JUnit; build externo pendente. Backend não alterado neste pedido; implantação anterior ainda não confirmada.
+- Build Actions43241274146 concluído SUCCESS; artefato13956120310. 35JUnit e88Python/PostgreSQL aprovados, incluindo as três novas regressões de Início.
+- APK0.6.3-test/code9,14.817.631bytes; assinatura v2 conferida também localmente, certificado diferente0.6.2. SHA25654a1f2256651bee4de05d2b22d466d304747cc20d8b9d245060130616a274737.
+- Fonte compilada cde85c46a23cb6f47f762281a578b370e30d6bd6. Integridade, ausência de segredos conhecidos, DEX e backend/monitor/configurações inalterados verificados. Sem teste físico/emulador.
+- Implantação anterior confirmada12/11: Render dep-dbq7abg8v5cc73fcj720 LIVE, backend ba7fa90, free, snapshot fresco com contrato atualizado. Não requer novo deploy para0.6.3. Pendências abaixo são registros históricos.
 
 ## Ajustes0.6.2 (em validação)
 - versionCode8. Ajustes com senha local; outras abas livres. Operação/parado por statusType, somente Operational Downtime=parado.
