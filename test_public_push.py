@@ -147,5 +147,19 @@ class PublicPushTests(unittest.TestCase):
         self.assertEqual(len(self.sent), 1)
         self.assertEqual(self.sent[0][1]["event_key"], "maintenance:maintenance-new")
 
+    def test_maintenance_provider_retry_survives_next_snapshot(self):
+        self.register()
+        snapshot = {"equipment": [], "maintenanceAlerts": [], "stale": False}
+        self.service.process(snapshot)
+        snapshot["maintenanceAlerts"] = [{"id": "maintenance-new", "reasonName": "AG MANUTENCAO"}]
+        self.service.sender = lambda *args: (_ for _ in ()).throw(RuntimeError("offline"))
+        self.service.process(snapshot)
+        with self.store.connection() as conn:
+            conn.execute("update operational.public_push_outbox set next_attempt_at=now()")
+        self.service.sender = lambda d, e: self.sent.append((d, e))
+        self.service.process(snapshot)
+        self.assertEqual(len(self.sent), 1)
+        self.assertEqual(self.sent[0][1]["attempts"], 1)
+
 
 if __name__ == "__main__": unittest.main()

@@ -103,7 +103,7 @@ class PublicPushNotifier(FirebaseNotifier):
                 keys = [(key if key.startswith("maintenance:") else key + ":repeat:" + str(slot), record) for key, record in events]
                 for key, record in keys:
                     conn.execute("insert into operational.public_push_outbox(id,device_id,event_key,record_id) values(%s,%s,%s,%s) on conflict(device_id,event_key) do nothing", (uuid4(), device["id"], key, record))
-                conn.execute("update operational.public_push_outbox set status='cancelled' where device_id=%s and status='pending' and not(event_key=any(%s))", (device["id"], [k for k, _ in keys]))
+                conn.execute("update operational.public_push_outbox set status='cancelled' where device_id=%s and status='pending' and not(event_key=any(%s)) and not(event_key like 'maintenance:%%' and record_id=any(%s))", (device["id"], [k for k, _ in keys], active))
             conn.execute("delete from operational.public_push_outbox where created_at<now()-interval '30 days'")
         for _ in range(50):
             with self.store.connection() as conn:
