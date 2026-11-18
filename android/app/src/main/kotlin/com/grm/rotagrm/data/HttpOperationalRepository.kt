@@ -75,12 +75,29 @@ class HttpOperationalRepository(private val unusedLegacyAuth: OidcAuthManager? =
 
     suspend fun removeDevice(deviceId: String) { request("/v1/devices/$deviceId", "DELETE") }
 
-    private suspend fun request(path: String, method: String = "GET", body: String? = null): String {
+    suspend fun enrollPush(deviceId: String, secret: String, token: String, settings: MonitoringSettings): Boolean {
+        val preferences = JSONObject().put("limitsMinutesByStatus", JSONObject(settings.limitsMinutesByStatus))
+            .put("alertsEnabledByStatus", JSONObject(settings.alertsEnabledByStatus))
+            .put("soundEnabled", settings.alertSoundEnabled).put("visualEnabled", settings.alertVisualEnabled)
+            .put("repeatMinutes", settings.repeatAlertMinutes)
+        val body = JSONObject().put("deviceId", deviceId).put("token", token).put("preferences", preferences)
+        return JSONObject(request("/v1/push/enroll", "POST", body.toString(), secret)).optBoolean("registered")
+    }
+
+    suspend fun confirmPush(deviceId: String, secret: String, challenge: String) {
+        request("/v1/push/$deviceId/confirm", "PUT", JSONObject().put("challenge", challenge).toString(), secret)
+    }
+
+    suspend fun disablePush(deviceId: String, secret: String) { request("/v1/push/$deviceId", "DELETE", secret = secret) }
+
+    private suspend fun request(path: String, method: String = "GET", body: String? = null, secret: String? = null): String {
         val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
         val uri = Uri.parse(base)
         require(uri.scheme == "https" && !uri.host.isNullOrBlank() && uri.userInfo == null && uri.query == null && uri.fragment == null)
-        val request = Request.Builder().url(base + path)
-            .header("Accept", "application/json").method(method, body?.toRequestBody("application/json".toMediaType())).build()
+        val builder = Request.Builder().url(base + path)
+            .header("Accept", "application/json").method(method, body?.toRequestBody("application/json".toMediaType()))
+        if (secret != null) builder.header("Authorization", "Bearer $secret")
+        val request = builder.build()
         return suspendCancellableCoroutine { continuation ->
             val call = client.newCall(request)
             continuation.invokeOnCancellation { call.cancel() }

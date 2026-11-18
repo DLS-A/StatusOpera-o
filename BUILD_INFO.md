@@ -1,10 +1,19 @@
-# Status Operacional — build de teste 0.6.4-test
+# Status Operacional — build de teste 0.6.5-test
+
+## 0.6.5 (em validação)
+- versionCode11, Android8+, dois cartões clicáveis por motivos escolhidos; tempo do apontamento atual.
+- Firebase FCM real, cadastro por segredo de instalação cifrado e desafio de posse do token. Sem login Firebase, sem faturamento. Chave administrativa somente no servidor.
+-104 testes backend aprovados;48JUnit esperados na compilação externa. Sem homologação em aparelho; Render free/force-stop podem impedir alertas pontuais.
+
+## Histórico0.6.4
 
 ## Recuperação e desempenho0.6.4 (em validação)
 - Android8+ preservado. Recuperação ao reabrir e voltar rede validada, timeouttotal25s, backoff5–30s e cadência que desconta duração da consulta. Serviço e apoio periódico continuam sujeitos ao Android; não promete execução24h.
 - Indexação do histórico por ID/tag/motivo e predecessor exato reduz trabalho repetitivo sem modificar datas/status. Replay local5.432registros:2,0464s→0,0154s para construir snapshot, payload equivalente; não é medição de rede.
 -92Python/PostgreSQL aprovados;41JUnit esperados. Compilação/deploy ainda pendentes. Captura13/11 e registros confirmaram interrupção do servidor às07:26 e lacuna de8914s; causa exata não comprovada. Hospedagemfree não oferece continuidade garantida.
 - Atalho Ajustes para bateria/permissões. Leitura periódica não exige permissão de notificações; usuário pode pausar monitor. Sem Firebase ou contratação nesta alteração; sem teste físico/emulador.
+- Final:Actions43430899819SUCCESS,artefato14039997017,41JUnit e92Python/PostgreSQLOK. Fontea31c1ab813baf456dd13ed41f7842ec95a8905ab. APK14.817.631bytes,SHA2567f2b6389e11b9e55288826fd79b2435cfcd5374c3187357a0e25516d37aa6d5f,v2verificadalocal;certificadodiferente0.6.3.
+- Backenddep-dbrgn40u01pc73b70esgLIVE/free/public/FCMfalse;13/11 13:09Z snapshotfresh93atuais,API0,433s,coletaúltima≈2,75s,tipos/durações/escritasbloqueadasconferidos. Registropendentedevalidaçãoacimaéintermediário;nenhumtestefísicoougarantiadecontinuidade24h.
 
 ## Início: LIBERADO PELA MANUT
 - Inclui todos os apontamentos atuais LIBERADO PELA MANUT, no mesmo cartão de AG MANUTENCAO: motivo, tempo em aberto, início e encerramento após mudança confirmada.

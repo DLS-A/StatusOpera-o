@@ -3,6 +3,7 @@ package com.grm.rotagrm.ui
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,9 +29,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.grm.rotagrm.BuildConfig
+import com.grm.rotagrm.notifications.PushRegistrationWorker
 import com.grm.rotagrm.OperationalUiState
 import com.grm.rotagrm.R
 import com.grm.rotagrm.domain.model.EquipmentStatus
+import com.grm.rotagrm.domain.model.HomeEquipmentGroup
+import com.grm.rotagrm.domain.model.homeEquipment
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.equipmentTabRecords
@@ -168,6 +172,14 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
     val now = rememberOperationalClock()
     val equipment = snapshot?.equipment.orEmpty()
     val visibleAlerts = homeAlerts(state.alerts, snapshot, now)
+    var selectedGroup by remember { mutableStateOf<HomeEquipmentGroup?>(null) }
+    val operating = homeEquipment(equipment, HomeEquipmentGroup.OPERATING)
+    val stopped = homeEquipment(equipment, HomeEquipmentGroup.STOPPED)
+    selectedGroup?.let { group ->
+        BackHandler { selectedGroup = null }
+        HomeGroupContent(group, if (group == HomeEquipmentGroup.OPERATING) operating else stopped, state) { selectedGroup = null }
+        return
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SectionHeading("Visão geral", if (state.apiAvailable) "Conectado" else if (snapshot != null) "Último dado salvo" else "Sem dados") }
         item {
@@ -183,18 +195,14 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
             }
         }
         item {
-            OutlinePanel {
-                Text("Classificação operacional", fontWeight = FontWeight.SemiBold, color = BrandBlue)
-                Text(if (snapshot == null) "Aguardando dados autorizados."
-                    else "Em operação: ${equipment.count { it.operationalState == "operating" }} · Parados: ${equipment.count { it.operationalState == "stopped" }}", style = MaterialTheme.typography.bodySmall)
-                if (snapshot != null) {
-                    Text("Em manutenção: ${equipment.count { it.operationalState == "maintenance" }}", style = MaterialTheme.typography.bodySmall)
-                    Text("Sem classificação confirmada: ${equipment.count { it.operationalState == "unknown" }}", style = MaterialTheme.typography.bodySmall)
-                    Text("Com apontamento: ${equipment.count { it.current != null }} · Sem apontamento: ${equipment.count { it.current == null }}", style = MaterialTheme.typography.bodySmall)
-                    Text("Parados: somente Parada Operacional. Operação e manutenção seguem o tipo informado pela API; equipamento sem apontamento não é contado como parado.", style = MaterialTheme.typography.labelSmall, color = MutedText)
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricPanel("Em operação", if (snapshot != null) operating.size.toString() else "—", R.drawable.ic_equipment,
+                    Modifier.weight(1f).clickable { selectedGroup = HomeEquipmentGroup.OPERATING })
+                MetricPanel("Parados", if (snapshot != null) stopped.size.toString() else "—", R.drawable.ic_pause,
+                    Modifier.weight(1f).clickable { selectedGroup = HomeEquipmentGroup.STOPPED })
             }
         }
+        item { Text("Toque para consultar. Classificação pelos apontamentos escolhidos; outros motivos e equipamentos sem apontamento ficam fora dos dois cartões.", style = MaterialTheme.typography.labelSmall, color = MutedText) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = onRefresh, enabled = state.signedIn && !state.loading, modifier = Modifier.weight(1f)) { Text("Atualizar") }
@@ -224,6 +232,34 @@ private fun OverviewContent(state: OperationalUiState, notificationsAllowed: Boo
                 Text("Permanece aqui até a atualização confirmar a mudança do apontamento.", style = MaterialTheme.typography.labelSmall, color = MutedText)
             }
         }
+    }
+}
+
+@Composable
+private fun HomeGroupContent(group: HomeEquipmentGroup, equipment: List<EquipmentStatus>, state: OperationalUiState, onBack: () -> Unit) {
+    var search by remember(group) { mutableStateOf("") }
+    val now = rememberOperationalClock()
+    val filtered = equipment.filter { it.equipmentTag.contains(search, ignoreCase = true) || it.current?.reasonName?.contains(search, ignoreCase = true) == true }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item {
+            TextButton(onClick = onBack) { Text("← Voltar ao início") }
+            SectionHeading(group.title, "${equipment.size} equipamentos")
+            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("Pesquisar equipamento ou motivo") }, singleLine = true)
+            Text("Tempo no apontamento atual; não soma motivos diferentes.", color = MutedText, style = MaterialTheme.typography.labelSmall)
+        }
+        items(filtered, key = { it.equipmentTag }) { item ->
+            val record = item.current!!
+            OutlinePanel {
+                Text(item.equipmentTag, fontWeight = FontWeight.Bold, color = BrandBlue)
+                Text(record.reasonName, style = MaterialTheme.typography.labelMedium)
+                Text("${if (group == HomeEquipmentGroup.STOPPED) "Tempo parado" else "Duração"}: ${clockDuration(record.elapsedSeconds(state.snapshot, confirmedNow(state, now)))}", color = BrandBlue, fontWeight = FontWeight.SemiBold, fontSize = 21.sp)
+                Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
+                Text("Operador: ${operatorLabel(record.operator)}", style = MaterialTheme.typography.bodySmall)
+                pointingLocation(record.location)?.let { Text("Local: $it", style = MaterialTheme.typography.bodySmall) }
+                if (oldCollection(state, now)) Text("Tempo da última coleta; dados desatualizados.", color = WarningAmber, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        if (filtered.isEmpty()) item { EmptyOperationalList(state, if (search.isBlank()) "Nenhum equipamento neste grupo." else "Nenhum equipamento corresponde à pesquisa.") }
     }
 }
 
@@ -372,7 +408,11 @@ private fun PreferencesContent(state: OperationalUiState, allowed: Boolean, onPe
         item {
             OutlinePanel {
                 Text(monitoringStatus, color = BrandBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                Text("Sem Firebase. Monitor contínuo com notificação fixa; no Android 15+ há limite de 6h em segundo plano. Apoio periódico: mínimo 15 min, sujeito a atrasos. Reabra o app para retomar o monitor.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                val pushStatus by PushRegistrationWorker.registrationStatus.collectAsState()
+                Text(pushStatus, color = BrandBlue, style = MaterialTheme.typography.bodySmall)
+                Text("Push Firebase: após cadastro e permissão, recebe avisos com a tela do app fechada, sem manter o monitor contínuo. Exige internet e coleta no servidor; o servidor gratuito pode suspender e atrasar avisos. Forçar parada impede recebimento até reabrir.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                Text("Monitor local de apoio: notificação fixa, limite de 6h no Android 15+. Consulta periódica: mínimo 15 min, sujeita a atrasos. Pausar o monitor também pausa o push neste aparelho.", style = MaterialTheme.typography.labelSmall, color = MutedText)
+                TextButton(onClick = { PushRegistrationWorker.enqueue(context) }) { Text("Verificar cadastro push") }
                 Text("Internet, servidor disponível, volume e canal com som são necessários. Não perturbe, economia de bateria e Forçar parada podem impedir alertas.", style = MaterialTheme.typography.labelSmall, color = MutedText)
                 Text("Nas configurações do aplicativo, permita uso de bateria em segundo plano/Sem restrições. Isso ajuda, mas não remove os limites do Android nem a suspensão do servidor gratuito.", style = MaterialTheme.typography.labelSmall, color = MutedText)
                 TextButton(onClick = {

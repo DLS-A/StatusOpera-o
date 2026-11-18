@@ -72,7 +72,7 @@ class PostgresIntegrationTests(unittest.TestCase):
     def test_migrations_and_private_role_permissions(self):
         with self.store.connection() as conn:
             rows = conn.execute("select relname,relrowsecurity from pg_class join pg_namespace n on n.oid=relnamespace where n.nspname='operational' and relkind='r'").fetchall()
-            self.assertEqual(len(rows),8)
+            self.assertEqual(len(rows),11)
             self.assertTrue(all(row['relrowsecurity'] for row in rows))
             for role in ('anon','authenticated'):
                 self.assertFalse(conn.execute("select has_schema_privilege(%s,'operational','USAGE') as allowed",(role,)).fetchone()['allowed'])

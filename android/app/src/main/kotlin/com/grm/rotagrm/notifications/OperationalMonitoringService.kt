@@ -121,6 +121,7 @@ class OperationalMonitoringService : Service() {
         private fun setEnabled(context: Context, value: Boolean) {
             context.getSharedPreferences("background_monitor", Context.MODE_PRIVATE).edit().putBoolean("enabled", value).apply()
             if (!value) OperationalRefreshWorker.cancel(context)
+            PushRegistrationWorker.enqueue(context)
         }
         fun start(context: Context, explicit: Boolean = false) {
             if (explicit) setEnabled(context, true)

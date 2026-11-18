@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1008724447341",
+    "project_id": "status-operacional-72027",
+    "storage_bucket": "status-operacional-72027.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008724447341:android:06ae303973ed2cd268af64",
+        "android_client_info": {
+          "package_name": "com.grm.rotagrm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJ997lFBNAf_PT0Ydj6D9FPDfVD8Om_D4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

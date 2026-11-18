@@ -1,5 +1,13 @@
 # Status Operacional — execução aprovada
 
+## 0.6.5 — cartões por motivo e push gratuito
+- Implementados cartões clicáveis Em operação (14 motivos) e Parados (20 motivos), todos os tipos de equipamento, duração do apontamento atual, normalização de acentos/espaços/hífen. Demais telas, PIN e alertas preservados.
+- Firebase real status-operacional-72027, configuração pública Android validada. Sem Firebase Authentication/Identity Platform: segredo por instalação cifrado no Keystore + prova de posse do token mediante desafio silencioso FCM. Endpoints/tabelas separados não autorizam leitura privada/escrita GRM.
+- Credencial administrativa normalizada e validada mantida somente em workflow privado; OAuth Google obtido. Nunca publicar chave privada. Não ativar faturamento; Render permanece free.
+- Backend: outbox persistente, deduplicação, repetição configurável, confirmação com expiração, proteção de proprietário/token, limite de cadastro. 104 testes Python/PostgreSQL passaram. Sete novos JUnit escritos, total esperado48.
+- Versão11/0.6.5-test preparada com FCM ligado. Build Android externo, migração/deploy e teste físico ainda pendentes; versão vigente0.6.4.
+- Limites: force-stop bloqueia até reabrir; suspensão Render free atrasa eventos; FCM não coleta dados nem mantém servidor acordado. Não prometer24/7.
+
 ## 0.6.4 — recuperação e desempenho, autonomia autorizada
 - Usuário relata dados desatualizados por muito tempo e quer monitor fora da tela; aparelhoAndroid16, compatibilidadeAndroid8+ preservada. Não contratar serviços nem ativar Firebase nesta etapa.
 - Captura13/11 mostra coleta07:26:31 SãoPaulo; logs confirmam shutdown10:26:54Z. Banco registra intervalo8914s entre tentativas com snapshot válido. Não atribuir causa exata ao encerramento sem evidência adicional; plano Renderfree suspende por inatividade.
@@ -8,6 +16,10 @@
 - APK0.6.4/code10: timeouttotal25s, recuperação com backoff5→30s, duração da consulta descontada da cadência, atualização imediata ao reabrir/recuperar redevalidada, mutexcompartilhado. Serviço sticky respeita stopSelf/timeout6h; notificação distingue stale/conexão. WorkManagerpersistente agenda naApplication e trata stalecomo retry, sem exigir permissão de notificação para leitura.
 - Ajustes inclui atalho de bateria/permissões, sem pedir exceção automática. REFEIÇÃO/AG/LIBERADO, senhalocal, demais telas preservados.
 -92testesPython/PostgreSQL OK, quatro novos casos para índice/equivalência/cache; seis novosJUnitde cadência escritos (total41esperado). Buildexterno e deploy ainda pendentes. Sem teste físico/emulador; sem promessa24/7Android/Renderfree.
+- Finalverificado:Actions43430899819SUCCESS,artefato14039997017,41JUnitOK,incluindoseisnovoscasos e35anteriores. Fonte a31c1ab813baf456dd13ed41f7842ec95a8905ab,mainpreservada.92Python/PostgreSQLOKsemignorados.
+- APK0.6.4/code10:14.817.631bytes,SHA2567f2b6389e11b9e55288826fd79b2435cfcd5374c3187357a0e25516d37aa6d5f,v2validadaindependentementelocal,certificadomudouvs0.6.3. Manifestmin26/target36 eACCESS_NETWORK_STATE,DEXcomRefreshPolicy/textosnovos,segredosconhecidosausentes.
+- Renderdep-dbrgn40u01pc73b70esgLIVE,commitcompiladoacima,free/public/FCMfalsepreservados.13:09Z:API0,433s,snapshotfresh93atuais,coleta13:08:53→13:08:56cerca2,75s;classificação/duraçãoconferidas;readiness200,escritas405/404/401.
+- APK/guia/evidênciapúblicaem0.6.4-testprontos. Continuidadetotalpermanecependente:freepodesuspender;Android15+6hFGS/fallback15min. PreçooficialRenderconsultado13/11:instânciamenorpagaUS$7/mês +uso;nenhumgastocontratado. Recomendarautorizaçãoantesdemudarplanopago;pushrequerconfiguraçãoerealregistroseguro,nãoativarsomenteFCMflag.
 
 ## 0.6.3 — LIBERADO PELA MANUT no Início
 - Nome confirmado pelo usuário. Incluir todos os equipamentos cujo apontamento atual corresponde exatamente ao motivo normalizado.

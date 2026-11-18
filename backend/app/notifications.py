@@ -3,6 +3,8 @@ from datetime import datetime, timezone, timedelta
 import hashlib
 import json
 import os
+import threading
+import unicodedata
 
 from .auth import allowed_emails
 
@@ -14,31 +16,39 @@ def digest(value):
 
 
 def plan_alerts(snapshot, device):
+    if snapshot.get("stale") or not snapshot.get("sourceAvailable", True) or not snapshot.get("persistenceAvailable", True):
+        return [], device.get("observed_maintenance") or [], []
     preferences = device.get("preferences") or {}
+    def canonical(value):
+        return " ".join("".join(c for c in unicodedata.normalize("NFD", value.upper()) if not unicodedata.combining(c)).split())
     current = [e["current"] for e in snapshot["equipment"] if e.get("current")]
-    limits = preferences.get("limitsMinutesByStatus", {PAUSE: 15})
-    enabled = preferences.get("alertsEnabledByStatus", {})
+    limits = {canonical(k): v for k, v in preferences.get("limitsMinutesByStatus", {PAUSE: 15}).items()}
+    enabled = {canonical(k): v for k, v in preferences.get("alertsEnabledByStatus", {}).items()}
     events, active_ids = [], []
     now = datetime.now(timezone.utc).timestamp() * 1000
     for record in current:
-        status = record["reasonName"]
-        key = status if status in limits else PAUSE if "PAUSA" in status.upper() or "ERGONOM" in status.upper() else status
+        status = canonical(record["reasonName"])
+        key = status
         if not preferences.get("visualEnabled", True) or not enabled.get(status, enabled.get(key, key == PAUSE)):
             continue
         active_ids.append(record["id"])
         minutes = limits.get(key)
-        start = record.get("startEpochMillis")
-        elapsed = max(0, (now - start) / 1000) if start is not None else record.get("durationSeconds", 0)
+        # Report clock is authoritative, not the untrusted phone clock nor an
+        # inferred accumulated stop across unrelated pointings.
+        measured = record.get("durationMeasuredAtEpochMillis")
+        elapsed = max(0, record.get("durationSeconds", 0))
+        if measured is not None:
+            elapsed += max(0, (now - measured) / 1000)
         if minutes and elapsed > minutes * 60:
             events.append((f'limit:{record["id"]}:{minutes * 60}', record["id"]))
     maintenance = {r["id"]: r for r in snapshot["maintenanceAlerts"]}
     if preferences.get("visualEnabled", True):
         active_ids.extend(record_id for record_id, record in maintenance.items()
-                          if enabled.get(record["reasonName"], True))
+                          if enabled.get(canonical(record["reasonName"]), True))
     observed = device.get("observed_maintenance")
     if observed is not None and preferences.get("visualEnabled", True):
         for record_id, record in maintenance.items():
-            if record_id not in observed and enabled.get(record["reasonName"], True):
+            if record_id not in observed and enabled.get(canonical(record["reasonName"]), True):
                 events.append(("maintenance:" + record_id, record_id))
     return events, list(maintenance), active_ids
 
@@ -48,16 +58,21 @@ class FirebaseNotifier:
         self.store = store
         self.sender = sender or self._send
         self._app = None
+        self._app_lock = threading.Lock()
+
+    def _firebase_app(self):
+        import firebase_admin
+        from firebase_admin import credentials
+        with self._app_lock:
+            if self._app is None:
+                value = os.getenv("FCM_SERVICE_ACCOUNT_JSON", "").strip()
+                credential = credentials.Certificate(json.loads(value)) if value else credentials.ApplicationDefault()
+                self._app = firebase_admin.initialize_app(credential, options={"httpTimeout": 10}, name="rota-grm-server")
+        return self._app
 
     def _send(self, device, event):
-        import firebase_admin
-        from firebase_admin import credentials, messaging
-        if self._app is None:
-            # A JSON secret environment variable is supported on Render. ADC is
-            # also possible via GOOGLE_APPLICATION_CREDENTIALS mounted as a secret file.
-            value = os.getenv("FCM_SERVICE_ACCOUNT_JSON", "").strip()
-            credential = credentials.Certificate(json.loads(value)) if value else credentials.ApplicationDefault()
-            self._app = firebase_admin.initialize_app(credential, options={"httpTimeout": 10}, name="rota-grm-server")
+        from firebase_admin import messaging
+        self._firebase_app()
         key = event["event_key"]
         local_id = "maintenance:" + event["record_id"] if key.startswith("maintenance:") else event["record_id"]
         data = {"event_id": digest(key), "alert_id": digest(local_id),

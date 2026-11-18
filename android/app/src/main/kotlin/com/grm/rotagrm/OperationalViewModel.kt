@@ -71,7 +71,7 @@ class OperationalViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 _state.value.snapshot?.let { evaluateAlerts(it, settings) }
                 val deliverySettings = settings.copy(acknowledgedAlertIds = emptySet(), lastAlertNotificationAt = emptyMap(),
-                    refreshIntervalSeconds = 60, repeatAlertMinutes = 5)
+                    refreshIntervalSeconds = 60)
                 if (identity != null && deliverySettings != lastPushPreferences) {
                     lastPushPreferences = deliverySettings
                     PushRegistrationWorker.enqueue(application)

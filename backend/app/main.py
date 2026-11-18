@@ -31,10 +31,15 @@ async def lifespan(app):
     task = None
     app.state.service = None
     app.state.store = None
+    app.state.public_push = None
     try:
         settings = Settings.from_env()
         store = PostgresStore(settings)
         notifier = FirebaseNotifier(store) if settings.push_enabled else None
+        if settings.push_enabled and os.getenv("AUTH_MODE") == "public":
+            from .public_push import PublicPushNotifier
+            notifier = PublicPushNotifier(store)
+            app.state.public_push = notifier
         service = SnapshotService(settings, store, GrmClient(settings), notifier)
         app.state.store, app.state.service = store, service
         await asyncio.to_thread(service.restore)
@@ -170,6 +175,7 @@ class Preferences(BaseModel):
     alertsEnabledByStatus: dict[str, bool] = Field(default_factory=dict)
     soundEnabled: bool = True
     visualEnabled: bool = True
+    repeatMinutes: int = Field(default=5, ge=1, le=1440)
 
     @field_validator("limitsMinutesByStatus", "alertsEnabledByStatus")
     @classmethod
@@ -232,3 +238,9 @@ def oauth_script():
     if activation_enabled() or os.getenv('AUTH_MODE') == 'public':
         raise HTTPException(404, "Não disponível nesta versão.")
     return Response(Path(__file__).with_name("oauth_consent.js").read_text(encoding="utf-8"), media_type="text/javascript")
+
+
+# Imported after Preferences is defined; scoped push writes do not grant access
+# to sessions, GRM writes or the legacy authenticated device endpoints.
+from .public_push import router as public_push_router
+app.include_router(public_push_router)

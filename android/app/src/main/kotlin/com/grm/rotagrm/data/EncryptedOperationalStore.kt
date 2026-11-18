@@ -34,6 +34,21 @@ class EncryptedOperationalStore(context: Context) {
 
     fun snapshot(userId: String): String? = synchronized(lock) { read("snapshot_${alertStorageId(userId)}") }
 
+    fun pushCredentials(): JSONObject = synchronized(lock) {
+        read("push_install")?.let { return@synchronized JSONObject(it) }
+        val bytes = ByteArray(32).also { java.security.SecureRandom().nextBytes(it) }
+        val json = JSONObject().put("deviceId", java.util.UUID.randomUUID().toString())
+            .put("secret", android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING))
+        write("push_install", json.toString())
+        json
+    }
+
+    fun updatePushCredentials(update: (JSONObject) -> Unit) = synchronized(lock) {
+        val json = pushCredentials()
+        update(json)
+        write("push_install", json.toString())
+    }
+
     fun saveSnapshot(identity: SessionIdentity, json: String) = synchronized(lock) {
         check(identity() == identity) { "A sessão foi alterada." }
         write("snapshot_${alertStorageId(identity.userId)}", json)
