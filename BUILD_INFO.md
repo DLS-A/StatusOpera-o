@@ -1,4 +1,9 @@
-# Status Operacional — build de teste 0.6.5-test
+# Status Operacional — build de teste 0.6.6-test
+
+- Somente Parados: retirados refeição, AG, LIBERADO e EXEC MANUT (3 tipos).14motivos remanescentes. Manutenções, alertas e push inalterados.
+- code12;49JUnit esperados, build externo pendente.
+
+## Histórico0.6.5
 
 ## 0.6.5 (em validação)
 - versionCode11, Android8+, dois cartões clicáveis por motivos escolhidos; tempo do apontamento atual.

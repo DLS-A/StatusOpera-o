@@ -1,11 +1,16 @@
 # Status Operacional — execução aprovada
 
+## 0.6.6 — Parados sem manutenção/refeição
+- Confirmado pelo usuário: excluir somente do cartão/lista/contagem Parados REFEICAO, AG MANUTENCAO, LIBERADO PELA MANUT e EXEC MANUT corretiva/preventiva/preventiva250h. Permanecem14motivos parados e14em operação.
+- Alteração limitada à projeção homeEquipmentGroup; aba Manutenções, alertas, push e backend intactos. Teste de regressão adicional para as seis exclusões e acentos;49JUnit esperados.
+- code12/0.6.6-test. Build externo/validação do APK pendentes. Sem deploy de servidor necessário.
+
 ## 0.6.5 — cartões por motivo e push gratuito
 - Implementados cartões clicáveis Em operação (14 motivos) e Parados (20 motivos), todos os tipos de equipamento, duração do apontamento atual, normalização de acentos/espaços/hífen. Demais telas, PIN e alertas preservados.
 - Firebase real status-operacional-72027, configuração pública Android validada. Sem Firebase Authentication/Identity Platform: segredo por instalação cifrado no Keystore + prova de posse do token mediante desafio silencioso FCM. Endpoints/tabelas separados não autorizam leitura privada/escrita GRM.
 - Credencial administrativa normalizada e validada mantida somente em workflow privado; OAuth Google obtido. Nunca publicar chave privada. Não ativar faturamento; Render permanece free.
-- Backend: outbox persistente, deduplicação, repetição configurável, confirmação com expiração, proteção de proprietário/token, limite de cadastro. 104 testes Python/PostgreSQL passaram. Sete novos JUnit escritos, total esperado48.
-- Versão11/0.6.5-test preparada com FCM ligado. Build Android externo, migração/deploy e teste físico ainda pendentes; versão vigente0.6.4.
+- Backend: outbox persistente, deduplicação, repetição configurável, confirmação com expiração, proteção de proprietário/token, limite de cadastro. 105 testes Python/PostgreSQL passaram. Sete novos JUnit escritos, total esperado48.
+- Versão11/0.6.5-test preparada com FCM ligado. Build externo44309690933 concluído success:48JUnit aprovados, APK code11 assinado v2 verificado. Migração aditiva aplicada; Render dep-dbuq4j8jo6nc73arbkng live/free com FCMtrue e leitura pública/fresca93equipamentos; proteções401/404/405 verificadas. Teste físico de push ainda pendente.
 - Limites: force-stop bloqueia até reabrir; suspensão Render free atrasa eventos; FCM não coleta dados nem mantém servidor acordado. Não prometer24/7.
 
 ## 0.6.4 — recuperação e desempenho, autonomia autorizada

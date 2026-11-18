@@ -40,8 +40,8 @@ android {
         applicationId = "com.grm.rotagrm"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.6.5-test"
+        versionCode = 12
+        versionName = "0.6.6-test"
         manifestPlaceholders["fcmEnabled"] = fcmEnabled.toString()
         buildConfigField("boolean", "FCM_ENABLED", fcmEnabled.toString())
         buildConfigField("String", "API_BASE_URL", "\"${gradlePropertyOrEmpty("rotaApiBaseUrl")}\"")

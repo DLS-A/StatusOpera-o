@@ -13,15 +13,25 @@ class HomeEquipmentGroupTest {
             "MOVIMENTANDO CHEIO", "FILA NO BASCULAMENTO", "MANOBRA BASCULAMENTO", "BASCULANDO",
             "SERVICO DE DRENAGEM", "CAPTACAO DE AGUA").forEach { assertEquals(it, HomeEquipmentGroup.OPERATING, homeEquipmentGroup(it)) }
     }
-    @Test fun allTwentyStoppedReasons() {
-        listOf("AG MANUTENCAO", "EQPTO NAO PROGRAMADO", "DISPONIVEL PARA OPERAR", "LOCOMOCAO", "LIBERADO PELA MANUT",
-            "TROCA DE TURNO/INSPECAO", "REFEICAO", "MAU TEMPO", "PALESTRA OPERADOR", "FALTA DE OPERADOR",
-            "AG COMBOIO", "ABASTECENDO", "AG PARE/SIGA", "PESAGEM", "PAUSA ERGONÔMICA", "PARADA PARTICULAR",
-            "AG ACERTO DE PRACA", "EXEC MANUT CORRETIVA", "EXEC MANUT PREVENTIVA", "EXEC MANUT PREVENTIVA - 250 HRS")
+    @Test fun allFourteenRemainingStoppedReasons() {
+        listOf("EQPTO NAO PROGRAMADO", "DISPONIVEL PARA OPERAR", "LOCOMOCAO", "TROCA DE TURNO/INSPECAO",
+            "MAU TEMPO", "PALESTRA OPERADOR", "FALTA DE OPERADOR", "AG COMBOIO", "ABASTECENDO", "AG PARE/SIGA",
+            "PESAGEM", "PAUSA ERGONÔMICA", "PARADA PARTICULAR", "AG ACERTO DE PRACA")
             .forEach { assertEquals(it, HomeEquipmentGroup.STOPPED, homeEquipmentGroup(it)) }
     }
+    @Test fun maintenanceAndMealExcludedOnlyFromStoppedHome() {
+        listOf("AG MANUTENCAO", "LIBERADO PELA MANUT", "REFEICAO", "EXEC MANUT CORRETIVA",
+            "EXEC MANUT PREVENTIVA", "EXEC MANUT PREVENTIVA - 250 HRS", " refeição ",
+            " ag manutenção ", " liberado pela manut ").forEach {
+            assertNull(it, homeEquipmentGroup(it))
+            val item = equipment("EH-1", it, "maintenance")
+            assertTrue(homeEquipment(listOf(item), HomeEquipmentGroup.STOPPED).isEmpty())
+            assertEquals(it, item.current!!.reasonName)
+            assertEquals("maintenance", item.operationalState)
+        }
+    }
     @Test fun normalizesAccentsCaseSpacesAndHyphen() {
-        assertEquals(HomeEquipmentGroup.STOPPED, homeEquipmentGroup("  exec  manut preventiva - 250 hrs "))
+        assertNull(homeEquipmentGroup("  exec  manut preventiva - 250 hrs "))
         assertEquals(HomeEquipmentGroup.OPERATING, homeEquipmentGroup(" captação de água "))
         assertEquals(HomeEquipmentGroup.STOPPED, homeEquipmentGroup(" pausa ergonômica "))
     }
@@ -33,18 +43,18 @@ class HomeEquipmentGroupTest {
         val water = equipment("EH-1", "CAPTACAO DE AGUA", "stopped")
         val maintenance = equipment("TR-1", "EXEC MANUT CORRETIVA", "maintenance")
         assertEquals(listOf(water), homeEquipment(listOf(water, maintenance), HomeEquipmentGroup.OPERATING))
-        assertEquals(listOf(maintenance), homeEquipment(listOf(water, maintenance), HomeEquipmentGroup.STOPPED))
+        assertTrue(homeEquipment(listOf(water, maintenance), HomeEquipmentGroup.STOPPED).isEmpty())
         assertEquals("stopped", water.operationalState)
     }
     @Test fun deduplicatesCountsAndReflectsNewPointing() {
-        val stopped = equipment("EH-1", "REFEICAO")
+        val stopped = equipment("EH-1", "MAU TEMPO")
         assertEquals(1, homeEquipment(listOf(stopped, stopped), HomeEquipmentGroup.STOPPED).size)
         val operating = equipment("EH-1", "PRODUZINDO/OPERANDO")
         assertTrue(homeEquipment(listOf(operating), HomeEquipmentGroup.STOPPED).isEmpty())
         assertEquals(1, homeEquipment(listOf(operating), HomeEquipmentGroup.OPERATING).size)
     }
     @Test fun staleDurationDoesNotGrowInEitherGroup() {
-        val record = equipment("EH-1", "REFEICAO").current!!
+        val record = equipment("EH-1", "MAU TEMPO").current!!
         val snapshot = OperationalSnapshot("2026-11-18T12:00:00Z", emptyList(), emptyList(), emptyList(), stale = true)
         assertEquals(123L, record.elapsedSeconds(snapshot, java.time.Instant.parse("2026-11-18T14:00:00Z").toEpochMilli()))
     }
