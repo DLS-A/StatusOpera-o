@@ -1,6 +1,6 @@
 # Status Operacional — 0.6.7-test / migração Supabase
 
-- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK/JUnit externo ainda pendente.
+- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK externo44905721415 concluído success;49JUnit aprovados, assinatura v2 e integridade verificadas.
 - Parados somente FALTA DE OPERADOR e LIBERADO PELA MANUTENÇÃO; fonte da causa titleMedium/Bold. LIBERADO removido dos Alertas ativos; outras listas preservadas.
 - Coleta e notificador automáticos a cada minuto: cron succeeded e HTTP200 sem timeout, verificados em21/11/2026. Snapshot fresco,93 equipamentos e93 inícios confirmados.19 apontamentos ainda iguais ao replay real de20/11 mantiveram datas exatas;74 apontamentos mudaram normalmente.
 - Rotas protegidas401/403, escrita snapshot405, ativação404; desafio e propriedade push verificados. OAuth FCM autenticado; teste físico de entrega ainda pendente.
@@ -116,3 +116,7 @@ O APK debug permite testar instalação, navegação, visual e preferências loc
 
 ## Próxima build operacional
 Configurar URL/backend/client OAuth reais em uma cópia autorizada, homologar login/banco/TLS/GRM e só então assinar release com a chave mantida pelo responsável. Nunca adicionar token GRM, senha PostgreSQL ou credencial administrativa Firebase ao Android.
+## Artefato verificado
+- Fonte do APK: d09e920b691c322a026c0669fc8087eafa80ea59.
+- SHA256 APK: 31ff4728ee606c32ca7ab80afaf5ee85fe6c8f53336efb0374ecdd76e730d002.
+- APK debug/test0.6.7; não release de loja. Sem homologação física. Certificado diferente da0.6.6: atualização exige remover somente teste anterior, perdendo ajustes/cache locais.

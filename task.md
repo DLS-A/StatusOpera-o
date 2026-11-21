@@ -1,6 +1,6 @@
 # Status Operacional — 0.6.7-test / migração Supabase
 
-- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK/JUnit externo ainda pendente.
+- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK externo44905721415 concluído success;49JUnit aprovados.
 - Parados somente FALTA DE OPERADOR e LIBERADO PELA MANUTENÇÃO; fonte da causa titleMedium/Bold. LIBERADO removido dos Alertas ativos; outras listas preservadas.
 - Coleta e notificador automáticos a cada minuto: cron succeeded e HTTP200 sem timeout, verificados em21/11/2026. Snapshot fresco,93 equipamentos e93 inícios confirmados.19 apontamentos ainda iguais ao replay real de20/11 mantiveram datas exatas;74 apontamentos mudaram normalmente.
 - Rotas protegidas401/403, escrita snapshot405, ativação404; desafio e propriedade push verificados. OAuth FCM autenticado; teste físico de entrega ainda pendente.
@@ -173,3 +173,5 @@
 - Usuário confirmou período24/09/2026 10:04:49→10/11/2026 14:35:00 (corrigiu24/11 inicialmente digitado). Duração calendário correta4077011s =1132:30:11, não416:12:00; diferença716:18:11.
 - Auditoria real de98fatias contíguas do mesmo apontamento EH-30950946660 cobre integralmente esse período, sem lacunas. API retornou corte corrente14:42:37 em vez de minuto solicitado14:35; o teste inicial que exigia fim exato falhou. Validação final recortou união de intervalos ao período confirmado e confirmou1132:30:11; não confundir corte retornado com período de auditoria.
 - Servidor fresco17:43:11Z conserva abertura24/09 10:04:49 confirmada e duração corrente1132:38:07. Sem nova mudança de código/deploy/APK;416:12:00 continua sem critério de total parcial identificado, não é duração integral desse período. Evidência interna eh309-confirmed-period-audit.json.
+## Entrega verificada 0.6.7
+- Actions44905721415 success;49JUnit aprovados, assinatura v2 válida, endpoint Supabase presente no DEX e segredos conhecidos ausentes. APK SHA25631ff4728ee606c32ca7ab80afaf5ee85fe6c8f53336efb0374ecdd76e730d002. Readiness remoto200 na entrega. Sem teste físico; APK debug/test, não release de loja.
