@@ -1,9 +1,34 @@
+# Status Operacional — 0.6.7-test / migração Supabase
+
+- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK/JUnit externo ainda pendente.
+- Parados somente FALTA DE OPERADOR e LIBERADO PELA MANUTENÇÃO; fonte da causa titleMedium/Bold. LIBERADO removido dos Alertas ativos; outras listas preservadas.
+- Coleta e notificador automáticos a cada minuto: cron succeeded e HTTP200 sem timeout, verificados em21/11/2026. Snapshot fresco,93 equipamentos e93 inícios confirmados.19 apontamentos ainda iguais ao replay real de20/11 mantiveram datas exatas;74 apontamentos mudaram normalmente.
+- Rotas protegidas401/403, escrita snapshot405, ativação404; desafio e propriedade push verificados. OAuth FCM autenticado; teste físico de entrega ainda pendente.
+- Banco e respostas comprimidos; papel restrito/TLS e cron com segredo no Vault. Dados originais preservados. Conta existente utilizada; sem cobrança ativada. Plano gratuito tem limites de tráfego/invocações e não garante24h.
+- Render permanece suspenso por billing/limite de transferência; não foi apagado nem contratado plano. APK antigo continua apontando ao Render até instalar nova versão.
+
+## Registro anterior (histórico; estados abaixo podem estar superados)
+
 # Status Operacional — execução aprovada
+
+## Migração Render → Supabase — viabilidade inicial verificada
+- Novo SUPABASE_ACCESS_TOKEN válido: Management API200, projeto ACTIVE_HEALTHY. Banco acessível244119219bytes; sem pg_cron/pg_net instalados na auditoria. Nenhum dado apagado, conta/plano alterado ou cobrança ativada.
+- Snapshot salvo19/11/2026 12:10UTC:93equipamentos,3959registros. Projeção pública54227bytes, gzip4385bytes. Estimativa só da resposta,1consulta/min24h por30dias:2,34GB/aparelho sem compressão ou0,19GB comprimido; não é medição de franquia real e não inclui outras transferências.
+- Candidato TypeScript supabase/functions/_shared/report-contract.ts preserva contrato Python, datas São Paulo por IANA, coorte móvel, união por ID/tag/motivo e confirmação de abertura. Paridade local3884registros reais/93equipamentos:0diferenças.
+- Função isolada status-migration-benchmark publicada no projeto atual: autenticação própria por token aleatório de32bytes, apenas hash no código; token privado no workflow. Sem acesso a banco/GRM/FCM e sem cron. Chamada anônima401; benchmark autenticado200,144,66ms de tempo decorrido e0diferenças nas cinco seções contra Python. Não interpretar tempo decorrido como CPU medida nem garantia para91dias de histórico.
+- Evidência: workflow/supabase-benchmark-evidence.json. APK continua apontando ao Render, ainda suspenso; não foi gerado APK novo.
+- Próximos passos: testar coleta real e histórico em lotes no Edge; persistência/lease atômico e endpoint de leitura compactado com limites/ETag; portar matrícula segura/outbox/FCM com paridade; cron privado sem expor segredos; validar datas reais e free quotas; só então alterar Android/buildexterno. Não trocar leitura sem migrar alertas.
+
+## 0.6.7 — visual aprovado; datas e APK bloqueados
+- Usuário aprovou a prévia ajustada: Parados somente FALTA DE OPERADOR e LIBERADO PELA MANUTENÇÃO; causa titleMedium/Bold igual a Alertas ativos. LIBERADO excluído dos alertas da home. Alterações locais nos modelos/UI/testes; ainda sem compilação/publicação.
+- Consulta real GRM com contrato correto (milissegundos Z/meia-noite São Paulo) retornou HTTP200 e3884registros; evidência privada 067-grm-private.json. A tentativa anterior com outro formato retornou500, portanto não concluir indisponibilidade do GRM.
+- Snapshot de produção retorna HTTP503. API administrativa Render confirmou serviço suspended, suspenders=[billing], plano free; último deploy registrado live641e23c. Não alterar plano, pagar ou tentar contornar suspensão.
+- Início original ainda NÃO validado ponta a ponta contra produção. Não modificar datas por suposição e não gerar APK até validação. Bloqueio: regularização da suspensão Render pelo titular da conta, sem contratação paga autorizada.
 
 ## 0.6.6 — Parados sem manutenção/refeição
 - Confirmado pelo usuário: excluir somente do cartão/lista/contagem Parados REFEICAO, AG MANUTENCAO, LIBERADO PELA MANUT e EXEC MANUT corretiva/preventiva/preventiva250h. Permanecem14motivos parados e14em operação.
 - Alteração limitada à projeção homeEquipmentGroup; aba Manutenções, alertas, push e backend intactos. Teste de regressão adicional para as seis exclusões e acentos;49JUnit esperados.
-- code12/0.6.6-test. Build externo/validação do APK pendentes. Sem deploy de servidor necessário.
+- code12/0.6.6-test entregue: build externo44329423766 success,49JUnit e assinatura v2 verificados. SHA256eca1bbe5e85a20d9b2ac958cac0d81f47538c46506e67828c37621c9cd70c58e. Sem teste físico.
 
 ## 0.6.5 — cartões por motivo e push gratuito
 - Implementados cartões clicáveis Em operação (14 motivos) e Parados (20 motivos), todos os tipos de equipamento, duração do apontamento atual, normalização de acentos/espaços/hífen. Demais telas, PIN e alertas preservados.

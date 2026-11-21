@@ -1,3 +1,14 @@
+# Status Operacional — 0.6.7-test / migração Supabase
+
+- Android code13; endpoint Supabase status-operacional; Firebase e Android8+ preservados. APK/JUnit externo ainda pendente.
+- Parados somente FALTA DE OPERADOR e LIBERADO PELA MANUTENÇÃO; fonte da causa titleMedium/Bold. LIBERADO removido dos Alertas ativos; outras listas preservadas.
+- Coleta e notificador automáticos a cada minuto: cron succeeded e HTTP200 sem timeout, verificados em21/11/2026. Snapshot fresco,93 equipamentos e93 inícios confirmados.19 apontamentos ainda iguais ao replay real de20/11 mantiveram datas exatas;74 apontamentos mudaram normalmente.
+- Rotas protegidas401/403, escrita snapshot405, ativação404; desafio e propriedade push verificados. OAuth FCM autenticado; teste físico de entrega ainda pendente.
+- Banco e respostas comprimidos; papel restrito/TLS e cron com segredo no Vault. Dados originais preservados. Conta existente utilizada; sem cobrança ativada. Plano gratuito tem limites de tráfego/invocações e não garante24h.
+- Render permanece suspenso por billing/limite de transferência; não foi apagado nem contratado plano. APK antigo continua apontando ao Render até instalar nova versão.
+
+## Registro anterior (histórico; estados abaixo podem estar superados)
+
 # Status Operacional — build de teste 0.6.6-test
 
 - Somente Parados: retirados refeição, AG, LIBERADO e EXEC MANUT (3 tipos).14motivos remanescentes. Manutenções, alertas e push inalterados.

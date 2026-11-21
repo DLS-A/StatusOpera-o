@@ -15,11 +15,14 @@ private val operatingReasons = setOf(
     "SERVICO DE DRENAGEM", "CAPTACAO DE AGUA",
 )
 private val stoppedReasons = setOf(
-    "EQPTO NAO PROGRAMADO", "DISPONIVEL PARA OPERAR", "LOCOMOCAO",
-    "TROCA DE TURNO/INSPECAO", "MAU TEMPO",
-    "PALESTRA OPERADOR", "FALTA DE OPERADOR", "AG COMBOIO", "ABASTECENDO", "AG PARE/SIGA",
-    "PESAGEM", "PAUSA ERGONOMICA", "PARADA PARTICULAR", "AG ACERTO DE PRACA",
+    "FALTA DE OPERADOR", "LIBERADO PELA MANUT", "LIBERADO PELA MANUTENCAO",
 )
+
+fun homeReasonLabel(reason: String): String = when (homeReason(reason)) {
+    "LIBERADO PELA MANUT", "LIBERADO PELA MANUTENCAO" -> "LIBERADO PELA MANUTENÇÃO"
+    "FALTA DE OPERADOR" -> "FALTA DE OPERADOR"
+    else -> reason
+}
 
 fun homeEquipmentGroup(reason: String?): HomeEquipmentGroup? = when (reason?.let(::homeReason)) {
     in operatingReasons -> HomeEquipmentGroup.OPERATING

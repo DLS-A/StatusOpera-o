@@ -35,6 +35,7 @@ import com.grm.rotagrm.R
 import com.grm.rotagrm.domain.model.EquipmentStatus
 import com.grm.rotagrm.domain.model.HomeEquipmentGroup
 import com.grm.rotagrm.domain.model.homeEquipment
+import com.grm.rotagrm.domain.model.homeReasonLabel
 import com.grm.rotagrm.domain.model.OperationalAlert
 import com.grm.rotagrm.domain.model.OperationalRecord
 import com.grm.rotagrm.domain.model.equipmentTabRecords
@@ -251,7 +252,9 @@ private fun HomeGroupContent(group: HomeEquipmentGroup, equipment: List<Equipmen
             val record = item.current!!
             OutlinePanel {
                 Text(item.equipmentTag, fontWeight = FontWeight.Bold, color = BrandBlue)
-                Text(record.reasonName, style = MaterialTheme.typography.labelMedium)
+                if (group == HomeEquipmentGroup.STOPPED) {
+                    Text(homeReasonLabel(record.reasonName), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                } else Text(record.reasonName, style = MaterialTheme.typography.labelMedium)
                 Text("${if (group == HomeEquipmentGroup.STOPPED) "Tempo parado" else "Duração"}: ${clockDuration(record.elapsedSeconds(state.snapshot, confirmedNow(state, now)))}", color = BrandBlue, fontWeight = FontWeight.SemiBold, fontSize = 21.sp)
                 Text(recordStartLabel(record), style = MaterialTheme.typography.bodySmall)
                 Text("Operador: ${operatorLabel(record.operator)}", style = MaterialTheme.typography.bodySmall)

@@ -11,16 +11,12 @@ fun isAwaitingMaintenanceStatus(status: String): Boolean = normalizedOperational
 
 fun isReleasedMaintenanceStatus(status: String): Boolean = normalizedOperationalStatus(status) == "LIBERADO PELA MANUT"
 
-/** Presentation only: released equipment is not a maintenance/sound event. */
+/** Home alerts only; released equipment belongs to Parados, not this list. */
 fun homeAlerts(alerts: List<OperationalAlert>, snapshot: OperationalSnapshot? = null,
     now: Long = System.currentTimeMillis()): List<OperationalAlert> {
     val visible = alerts.filter { isAwaitingMaintenanceStatus(it.status) ||
-        isReleasedMaintenanceStatus(it.status) || normalizedOperationalStatus(it.status) == "REFEICAO" }
-    val released = snapshot?.equipment.orEmpty().mapNotNull { it.current }
-        .filter { it.id.isNotBlank() && isReleasedMaintenanceStatus(it.reasonName) }
-        .map { OperationalAlert(id = it.id, equipmentTag = it.equipmentTag, status = it.reasonName,
-            elapsedSeconds = it.elapsedSeconds(snapshot, now), limitSeconds = 0L, exceededSeconds = 0L) }
-    return (visible + released).distinctBy { it.id }
+        normalizedOperationalStatus(it.status) == "REFEICAO" }
+    return visible.distinctBy { it.id }
 }
 
 fun homeAlertDescription(alert: OperationalAlert, elapsed: Long): String = when {
